@@ -37,9 +37,10 @@ export default function Dashboard() {
     return acc;
   }, {} as Record<string, number>);
 
-  const employeeTotals = expenses.reduce((acc, curr) => {
-    const emp = curr.employee || "Unknown";
-    acc[emp] = (acc[emp] || 0) + curr.amount;
+  const debtorTotals = debtors.reduce((acc, curr) => {
+    if (curr.status === "paid") return acc;
+    const name = curr.debtorName || "Unknown";
+    acc[name] = (acc[name] || 0) + (curr.amount - (curr.paidAmount || 0));
     return acc;
   }, {} as Record<string, number>);
 
@@ -49,7 +50,7 @@ export default function Dashboard() {
     color: `hsl(${(index * 137.5) % 360}, 70%, 65%)` // Dynamic attractive colors
   }));
 
-  const employeeData = Object.entries(employeeTotals).map(([name, amount]) => ({
+  const debtorData = Object.entries(debtorTotals).map(([name, amount]) => ({
     name,
     amount
   }));
@@ -202,7 +203,7 @@ export default function Dashboard() {
               label: "New Expense",
               iconBg: "bg-red-500/20",
               iconColor: "text-red-400",
-              onClick: () => navigate("/expenses/add")
+              onClick: () => navigate("/expenses")
             },
             {
               icon: UserPlus,
@@ -254,16 +255,16 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <h4 className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
-              Spending by Employee
+              Debtors Chart
             </h4>
             <div className="h-48">
-              {employeeData.length === 0 ? (
+              {debtorData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-sm italic" style={{ color: "var(--text-muted)" }}>
-                  Insufficient data for chart
+                  No outstanding debts
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={employeeData}>
+                  <BarChart data={debtorData}>
                     <XAxis
                       dataKey="name"
                       axisLine={false}
@@ -279,7 +280,7 @@ export default function Dashboard() {
                       cursor={{ fill: isDark ? "#2a2b2e" : "#e5e7eb" }}
                       contentStyle={tooltipStyle}
                     />
-                    <Bar dataKey="amount" fill="var(--accent)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="amount" fill="#f87171" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -287,7 +288,7 @@ export default function Dashboard() {
           </div>
           <div>
             <h4 className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
-              Spending by Category
+              Expenses Chart
             </h4>
             <div className="h-48">
               {categoryData.length === 0 ? (

@@ -6,12 +6,13 @@ import {
     Download,
     Mail,
     Calendar as CalendarIcon,
-    ChevronRight,
     CheckCircle2,
     Filter,
     ArrowRight
 } from "lucide-react";
 import { formatCurrency } from "../utils/format";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Reports() {
     const { expenses, debtors, payments } = useData();
@@ -99,6 +100,175 @@ export default function Reports() {
         const subject = `Spendora Financial Report (${startDate} to ${endDate})`;
         const body = encodeURIComponent(generateReportText());
         window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    };
+
+    const handleDownloadPDF = () => {
+        const doc = new jsPDF();
+        const accentColor: [number, number, number] = [0, 188, 212];
+        const darkColor: [number, number, number] = [30, 30, 35];
+        const mutedColor: [number, number, number] = [120, 120, 130];
+        const pageWidth = doc.internal.pageSize.getWidth();
+
+        // --- Header ---
+        doc.setFillColor(...darkColor);
+        doc.rect(0, 0, pageWidth, 28, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(...accentColor);
+        doc.text("SPEND", 14, 18);
+        const spendWidth = doc.getTextWidth("SPEND");
+        doc.setTextColor(255, 255, 255);
+        doc.text("ORA", 14 + spendWidth, 18);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(180, 180, 190);
+        doc.text("Financial Report", pageWidth - 14, 18, { align: "right" });
+
+        // --- Period ---
+        doc.setFontSize(10);
+        doc.setTextColor(...mutedColor);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Report Period: ${startDate}  →  ${endDate}`, 14, 36);
+
+        // --- Summary Boxes ---
+        doc.setFillColor(240, 252, 254);
+        doc.roundedRect(14, 42, 82, 20, 4, 4, "F");
+        doc.setFontSize(8);
+        doc.setTextColor(...mutedColor);
+        doc.text("TOTAL EXPENSES", 18, 49);
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...accentColor);
+        doc.text(formatCurrency(reportData.totalExpense, preferredCurrency), 18, 57);
+
+        doc.setFillColor(255, 243, 243);
+        doc.roundedRect(104, 42, 92, 20, 4, 4, "F");
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(...mutedColor);
+        doc.text("TOTAL OUTSTANDING DEBT", 108, 49);
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(220, 50, 50);
+        doc.text(formatCurrency(reportData.totalDebt, preferredCurrency), 108, 57);
+
+        let yPos = 72;
+
+        // --- Expenses Table ---
+        if (includeExpenses && reportData.expenses.length > 0) {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(...darkColor);
+            doc.text("Expenses", 14, yPos);
+            yPos += 4;
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [["Date", "Subject", "Category", "Employee", "Amount"]],
+                body: reportData.expenses.map(e => [
+                    e.date || "",
+                    e.subject || e.description || "—",
+                    e.category || "—",
+                    e.employee || "Me",
+                    formatCurrency(e.amount, preferredCurrency),
+                ]),
+                headStyles: {
+                    fillColor: accentColor,
+                    textColor: [255, 255, 255],
+                    fontStyle: "bold",
+                    fontSize: 9,
+                },
+                bodyStyles: { fontSize: 9, textColor: [50, 50, 60] },
+                alternateRowStyles: { fillColor: [245, 252, 253] },
+                columnStyles: { 4: { halign: "right" } },
+                margin: { left: 14, right: 14 },
+            });
+            yPos = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        // --- Debtors Table ---
+        if (includeDebtors && reportData.debtors.length > 0) {
+            if (yPos > 240) { doc.addPage(); yPos = 20; }
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(...darkColor);
+            doc.text("Debtors", 14, yPos);
+            yPos += 4;
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [["Name", "Total", "Paid", "Remaining", "Status"]],
+                body: reportData.debtors.map(d => {
+                    const remaining = d.amount - (d.paidAmount || 0);
+                    return [
+                        d.debtorName || "—",
+                        formatCurrency(d.amount, preferredCurrency),
+                        formatCurrency(d.paidAmount || 0, preferredCurrency),
+                        formatCurrency(remaining, preferredCurrency),
+                        d.status === "paid" ? "Paid" : "Pending",
+                    ];
+                }),
+                headStyles: {
+                    fillColor: [220, 50, 50],
+                    textColor: [255, 255, 255],
+                    fontStyle: "bold",
+                    fontSize: 9,
+                },
+                bodyStyles: { fontSize: 9, textColor: [50, 50, 60] },
+                alternateRowStyles: { fillColor: [255, 248, 248] },
+                columnStyles: {
+                    1: { halign: "right" },
+                    2: { halign: "right" },
+                    3: { halign: "right" },
+                    4: { halign: "center" },
+                },
+                margin: { left: 14, right: 14 },
+            });
+            yPos = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        // --- Payments Table ---
+        if (reportData.payments.length > 0) {
+            if (yPos > 240) { doc.addPage(); yPos = 20; }
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(...darkColor);
+            doc.text("Payments Received", 14, yPos);
+            yPos += 4;
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [["Date", "Debtor", "Amount"]],
+                body: reportData.payments.map(p => [
+                    p.date || "",
+                    p.debtorName || "—",
+                    formatCurrency(p.amount, preferredCurrency),
+                ]),
+                headStyles: {
+                    fillColor: [34, 197, 94],
+                    textColor: [255, 255, 255],
+                    fontStyle: "bold",
+                    fontSize: 9,
+                },
+                bodyStyles: { fontSize: 9, textColor: [50, 50, 60] },
+                alternateRowStyles: { fillColor: [245, 255, 248] },
+                columnStyles: { 2: { halign: "right" } },
+                margin: { left: 14, right: 14 },
+            });
+            yPos = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        // --- Footer ---
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.setFillColor(...darkColor);
+        doc.rect(0, pageHeight - 14, pageWidth, 14, "F");
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(150, 150, 160);
+        doc.text("Generated by Spendora  •  spendora.app", 14, pageHeight - 5);
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth - 14, pageHeight - 5, { align: "right" });
+
+        doc.save(`spendora-report-${startDate}-to-${endDate}.pdf`);
     };
 
     const cardStyle = {
@@ -258,7 +428,7 @@ export default function Reports() {
                                     Email Report
                                 </button>
                                 <button
-                                    onClick={() => window.print()}
+                                    onClick={handleDownloadPDF}
                                     className="flex-1 py-4 rounded-xl font-bold transition-all border border-[var(--border)] bg-[var(--bg-elevated)] flex items-center justify-center gap-3 hover:bg-[var(--bg-muted)]"
                                     style={{ color: "var(--text-primary)" }}
                                 >

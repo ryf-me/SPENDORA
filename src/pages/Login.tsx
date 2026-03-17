@@ -10,6 +10,7 @@ export default function Login() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,7 @@ export default function Login() {
         navigate("/");
       } else {
         if (!name.trim()) throw new Error("Full name is required");
+        if (password !== confirmPassword) throw new Error("Passwords do not match");
         await register(name, email, password);
         navigate("/");
       }
@@ -187,6 +189,41 @@ export default function Login() {
               </div>
             )}
 
+            {!isLogin && !isForgotPassword && (
+              <div className="animate-in fade-in slide-in-from-top-2">
+                <label
+                  className="block text-sm font-medium"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Confirm Password
+                </label>
+                <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5" style={{ color: "var(--text-muted)" }} />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="rounded-xl block w-full pl-10 sm:text-sm py-3 border outline-none focus:ring-2 transition-all"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      borderColor:
+                        confirmPassword && password !== confirmPassword
+                          ? "#ef4444"
+                          : "var(--border)",
+                      color: "var(--text-primary)",
+                    }}
+                    placeholder="••••••••"
+                  />
+                </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                )}
+              </div>
+            )}
+
             {isLogin && !isForgotPassword && (
               <div className="flex items-center justify-end">
                 <button
@@ -270,7 +307,7 @@ export default function Login() {
 
               <div className="mt-6 text-center">
                 <button
-                  onClick={() => setIsLogin(!isLogin)}
+                  onClick={() => { setIsLogin(!isLogin); setConfirmPassword(""); }}
                   className="text-sm transition-colors"
                   style={{ color: "var(--accent)" }}
                 >
