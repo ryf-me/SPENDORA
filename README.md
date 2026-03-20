@@ -91,7 +91,7 @@ Spendora is a modern, AI-powered expense tracking application built with React a
    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
    VITE_FIREBASE_APP_ID=your_app_id
    VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
-   VITE_GEMINI_API_KEY=your_gemini_api_key
+   GEMINI_API_KEY=your_server_gemini_api_key
    ```
 
 4. **Run locally**
@@ -125,7 +125,7 @@ npm run preview
    VITE_FIREBASE_MESSAGING_SENDER_ID
    VITE_FIREBASE_APP_ID
    VITE_FIREBASE_MEASUREMENT_ID
-   VITE_GEMINI_API_KEY
+   GEMINI_API_KEY
    ```
 
 3. **Deploy**

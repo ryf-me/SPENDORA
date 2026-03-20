@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
-import { GoogleGenAI } from "@google/genai";
 import { Send, Bot, User, Loader2 } from "lucide-react";
 import { useData } from "../context/DataContext";
-import { useApp } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function AIAssistant() {
   const { expenses, debtors } = useData();
-  const { theme } = useApp();
+  const { currentUser } = useAuth();
   const [messages, setMessages] = useState<{ role: "user" | "model"; text: string }[]>([
     {
       role: "model",
@@ -25,6 +24,37 @@ export default function AIAssistant() {
     scrollToBottom();
   }, [messages]);
 
+  const buildSafeContext = () => {
+    const totalExpense = expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const expenseCount = expenses.length;
+
+    const categoryTotals = expenses.reduce<Record<string, number>>((acc, item) => {
+      const key = item.category || "Uncategorized";
+      acc[key] = (acc[key] || 0) + (Number(item.amount) || 0);
+      return acc;
+    }, {});
+
+    const debtorCount = debtors.length;
+    const totalDebt = debtors.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalCollected = debtors.reduce((sum, item) => sum + (Number(item.paidAmount) || 0), 0);
+    const pendingCount = debtors.filter((d) => d.status === "pending").length;
+
+    return {
+      expenseSummary: {
+        totalExpense,
+        expenseCount,
+        categoryTotals,
+      },
+      debtorSummary: {
+        debtorCount,
+        totalDebt,
+        totalCollected,
+        pendingCount,
+        remainingBalance: totalDebt - totalCollected,
+      },
+    };
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -35,30 +65,33 @@ export default function AIAssistant() {
     setLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("Gemini API key is missing. Please configure VITE_GEMINI_API_KEY in your .env file.");
+      if (!currentUser) {
+        throw new Error("You must be logged in to use the AI assistant.");
       }
 
-      const ai = new GoogleGenAI({ apiKey });
+      const safeContext = buildSafeContext();
+      const idToken = await currentUser.getIdToken();
 
-      const context = `
-        You are an AI financial assistant for an app called SPENDORA.
-        Here is the user's current data:
-        Expenses: ${JSON.stringify(expenses)}
-        Debtors: ${JSON.stringify(debtors)}
-        
-        Answer the user's question based on this data. Be concise, helpful, and professional.
-      `;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `${context}\n\nUser: ${userMessage}`,
+      const response = await fetch("/api/ai-assistant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          context: safeContext,
+        }),
       });
+
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData?.error || "Failed to connect to AI service.");
+      }
 
       setMessages((prev) => [
         ...prev,
-        { role: "model", text: response.text || "I could not generate a response." },
+        { role: "model", text: responseData?.text || "I could not generate a response." },
       ]);
     } catch (error: any) {
       console.error("AI Error:", error);
@@ -167,7 +200,7 @@ export default function AIAssistant() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your spending habits, total debts, etc..."
+                placeholder="Ask about your spending habits, total debts, etc..."
               className="flex-1 rounded-xl px-4 py-3 outline-none transition-all"
               style={{
                 background: "var(--bg-surface)",

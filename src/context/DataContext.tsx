@@ -10,7 +10,6 @@ import {
   updateDoc,
   doc,
   serverTimestamp,
-  orderBy,
   getDocs,
   writeBatch,
 } from "firebase/firestore";
@@ -235,10 +234,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const deleteCategory = async (id: string) => {
     if (!currentUser) return;
-    const isDefault = ["Marketing", "Sales", "Operations", "Finance", "Travel", "Meals"].includes(id); // Simple check, or use id
-    // We'll just allow deleting any category by ID
+    const category = categories.find((item) => item.id === id);
+    if (!category || category.userId !== currentUser.uid) {
+      throw new Error("Unauthorized category deletion attempt.");
+    }
+
     const catRef = doc(db, "categories", id);
-    // Be careful with deleting categories used in expenses, but for now we just delete
     const batch = writeBatch(db);
     batch.delete(catRef);
     await batch.commit();
@@ -246,6 +247,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const deleteDebtor = async (id: string) => {
     if (!currentUser) return;
+    const debtor = debtors.find((item) => item.id === id);
+    if (!debtor || debtor.userId !== currentUser.uid) {
+      throw new Error("Unauthorized debtor deletion attempt.");
+    }
+
     try {
       const batch = writeBatch(db);
 
@@ -285,6 +291,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const deleteExpense = async (id: string) => {
     if (!currentUser) return;
+    const expense = expenses.find((item) => item.id === id);
+    if (!expense || expense.userId !== currentUser.uid) {
+      throw new Error("Unauthorized expense deletion attempt.");
+    }
+
     try {
       await writeBatch(db).delete(doc(db, "expenses", id)).commit();
     } catch (err) {
@@ -295,6 +306,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const updateExpense = async (id: string, expense: Partial<Expense>) => {
     if (!currentUser) return;
+    const existingExpense = expenses.find((item) => item.id === id);
+    if (!existingExpense || existingExpense.userId !== currentUser.uid) {
+      throw new Error("Unauthorized expense update attempt.");
+    }
+
     try {
       const expenseRef = doc(db, "expenses", id);
       await updateDoc(expenseRef, {
@@ -323,6 +339,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const updateDebtor = async (id: string, debtor: Partial<Debtor>) => {
     if (!currentUser) return;
+    const existingDebtor = debtors.find((item) => item.id === id);
+    if (!existingDebtor || existingDebtor.userId !== currentUser.uid) {
+      throw new Error("Unauthorized debtor update attempt.");
+    }
+
     try {
       const debtorRef = doc(db, "debtors", id);
       await updateDoc(debtorRef, {
@@ -337,15 +358,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const recordDebtorPayment = async (id: string, paymentAmount: number, method = "cash", date?: string) => {
     if (!currentUser) return;
     try {
-      console.log(`Recording payment for debtor ${id}: ${paymentAmount}`);
       const debtorRef = doc(db, "debtors", id);
       const debtor = debtors.find(d => d.id === id);
-      if (!debtor) {
-        console.error("Debtor not found in state:", id);
-        return;
+      if (!debtor || debtor.userId !== currentUser.uid) {
+        throw new Error("Unauthorized debtor payment attempt.");
+      }
+
+      if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+        throw new Error("Payment amount must be greater than zero.");
       }
 
       const newPaidAmount = (Number(debtor.paidAmount) || 0) + Number(paymentAmount);
+      if (newPaidAmount > Number(debtor.amount)) {
+        throw new Error("Payment amount exceeds remaining balance.");
+      }
+
       const isFullyPaid = newPaidAmount >= Number(debtor.amount);
 
       const batch = writeBatch(db);
@@ -368,7 +395,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
 
       await batch.commit();
-      console.log("Payment recorded successfully");
     } catch (err) {
       console.error("Error in recordDebtorPayment:", err);
       throw err;
@@ -379,7 +405,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!currentUser) return;
     try {
       const debtor = debtors.find(d => d.id === id);
-      if (!debtor) return;
+      if (!debtor || debtor.userId !== currentUser.uid) {
+        throw new Error("Unauthorized debtor settlement attempt.");
+      }
 
       const remainingToPay = Number(debtor.amount) - (Number(debtor.paidAmount) || 0);
       if (remainingToPay <= 0) return;
@@ -403,7 +431,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         userId: currentUser.uid,
         createdAt: serverTimestamp(),
       };
-      console.log("Adding payment record:", paymentData);
       const paymentRef = doc(collection(db, "payments"));
       batch.set(paymentRef, paymentData);
 

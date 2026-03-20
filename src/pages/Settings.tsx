@@ -97,7 +97,6 @@ export default function Settings() {
     setSaveLoading(true);
     setSaveMessage({ type: "", text: "" });
     try {
-      console.log("Settings: Initiating profile save...");
       await updateUserProfile({
         name,
         bio,
@@ -107,7 +106,6 @@ export default function Settings() {
       clearTimeout(timeoutId);
       setAvatarPreview(null);
       setSaveMessage({ type: "success", text: "Profile updated successfully!" });
-      console.log("Settings: Profile save completed successfully.");
     } catch (err: any) {
       clearTimeout(timeoutId);
       console.error("Settings: Profile save error:", err);
