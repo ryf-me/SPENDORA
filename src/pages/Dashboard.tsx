@@ -164,7 +164,8 @@ export default function Dashboard() {
                   expenses.slice(0, 5).map((expense) => (
                     <tr
                       key={expense.id}
-                      className="transition-colors"
+                      onClick={() => navigate(`/expenses/${expense.id}`)}
+                      className="transition-all cursor-pointer hover:bg-gray-50/50"
                       style={{ borderBottom: "1px solid var(--border)" }}
                     >
                       <td className="py-3">{expense.subject || expense.description || "No subject"}</td>

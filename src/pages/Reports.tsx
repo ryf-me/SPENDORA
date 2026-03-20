@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import { useData } from "../context/DataContext";
 import { useApp } from "../context/AppContext";
 import {
@@ -79,7 +79,7 @@ export default function Reports() {
             text += `Current Outstanding: ${formatCurrency(reportData.totalDebt, preferredCurrency)}\n`;
             reportData.debtors.forEach(d => {
                 const remaining = d.amount - (d.paidAmount || 0);
-                text += `- ${d.debtorName}: Total ${formatCurrency(d.amount, preferredCurrency)}, Paid ${formatCurrency(d.paidAmount || 0, preferredCurrency)}, Due ${formatCurrency(remaining, preferredCurrency)}\n`;
+                text += `- ${d.debtorName}: Total ${formatCurrency(d.amount, preferredCurrency)}, Paid ${formatCurrency(d.paidAmount || 0, preferredCurrency)}, Due ${formatCurrency(remaining, preferredCurrency)}, Contact ${d.email || d.phoneNumber || "N/A"}\n`;
             });
             text += `\n`;
         }
@@ -87,7 +87,7 @@ export default function Reports() {
         if (reportData.payments.length > 0) {
             text += `RECENT PAYMENTS RECEIVED\n`;
             reportData.payments.forEach(p => {
-                text += `- ${p.date}: ${p.debtorName} paid ${formatCurrency(p.amount, preferredCurrency)}\n`;
+                text += `- ${p.date}: ${p.debtorName} paid ${formatCurrency(p.amount, preferredCurrency)} via ${p.method || "Manual Entry"}\n`;
             });
             text += `\n`;
         }
@@ -128,7 +128,7 @@ export default function Reports() {
         doc.setFontSize(10);
         doc.setTextColor(...mutedColor);
         doc.setFont("helvetica", "normal");
-        doc.text(`Report Period: ${startDate}  →  ${endDate}`, 14, 36);
+        doc.text(`Report Period: ${startDate}  â†’  ${endDate}`, 14, 36);
 
         // --- Summary Boxes ---
         doc.setFillColor(240, 252, 254);
@@ -167,8 +167,8 @@ export default function Reports() {
                 head: [["Date", "Subject", "Category", "Employee", "Amount"]],
                 body: reportData.expenses.map(e => [
                     e.date || "",
-                    e.subject || e.description || "—",
-                    e.category || "—",
+                    e.subject || e.description || "â€”",
+                    e.category || "â€”",
                     e.employee || "Me",
                     formatCurrency(e.amount, preferredCurrency),
                 ]),
@@ -197,11 +197,12 @@ export default function Reports() {
 
             autoTable(doc, {
                 startY: yPos,
-                head: [["Name", "Total", "Paid", "Remaining", "Status"]],
+                head: [["Name", "Contact", "Total", "Paid", "Remaining", "Status"]],
                 body: reportData.debtors.map(d => {
                     const remaining = d.amount - (d.paidAmount || 0);
                     return [
                         d.debtorName || "—",
+                        d.email || d.phoneNumber || "—",
                         formatCurrency(d.amount, preferredCurrency),
                         formatCurrency(d.paidAmount || 0, preferredCurrency),
                         formatCurrency(remaining, preferredCurrency),
@@ -217,10 +218,10 @@ export default function Reports() {
                 bodyStyles: { fontSize: 9, textColor: [50, 50, 60] },
                 alternateRowStyles: { fillColor: [255, 248, 248] },
                 columnStyles: {
-                    1: { halign: "right" },
                     2: { halign: "right" },
                     3: { halign: "right" },
-                    4: { halign: "center" },
+                    4: { halign: "right" },
+                    5: { halign: "center" },
                 },
                 margin: { left: 14, right: 14 },
             });
@@ -238,10 +239,11 @@ export default function Reports() {
 
             autoTable(doc, {
                 startY: yPos,
-                head: [["Date", "Debtor", "Amount"]],
+                head: [["Date", "Debtor", "Method", "Amount"]],
                 body: reportData.payments.map(p => [
                     p.date || "",
                     p.debtorName || "—",
+                    p.method || "Manual Entry",
                     formatCurrency(p.amount, preferredCurrency),
                 ]),
                 headStyles: {
@@ -252,7 +254,7 @@ export default function Reports() {
                 },
                 bodyStyles: { fontSize: 9, textColor: [50, 50, 60] },
                 alternateRowStyles: { fillColor: [245, 255, 248] },
-                columnStyles: { 2: { halign: "right" } },
+                columnStyles: { 3: { halign: "right" } },
                 margin: { left: 14, right: 14 },
             });
             yPos = (doc as any).lastAutoTable.finalY + 10;
@@ -265,7 +267,7 @@ export default function Reports() {
         doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(150, 150, 160);
-        doc.text("Generated by Spendora  •  spendora.app", 14, pageHeight - 5);
+        doc.text("Generated by Spendora  â€¢  spendora.app", 14, pageHeight - 5);
         doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth - 14, pageHeight - 5, { align: "right" });
 
         doc.save(`spendora-report-${startDate}-to-${endDate}.pdf`);
@@ -448,3 +450,4 @@ export default function Reports() {
         </div>
     );
 }
+

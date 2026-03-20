@@ -32,6 +32,12 @@ export interface Expense {
   reimbursable: boolean;
   employee: string;
   addToReport: boolean;
+  tags: string[]; // Added
+  isRecurring: boolean; // Added
+  frequency?: string; // Added
+  endDate?: string; // Added
+  icon?: string; // Added for custom icon selection
+  paymentMethod?: "credit_card" | "debit_card" | "bank_transfer" | "cash" | "cheque";
 }
 
 export interface Debtor {
@@ -39,6 +45,7 @@ export interface Debtor {
   userId: string;
   debtorName: string;
   phoneNumber?: string; // Added
+  email?: string;
   amount: number;
   paidAmount: number; // Added for partial payments
   expenseId?: string;
@@ -55,6 +62,7 @@ export interface Payment {
   debtorName: string;
   amount: number;
   date: string;
+  method?: string;
   userId: string;
   createdAt: any;
 }
@@ -73,10 +81,14 @@ interface DataContextType {
   payments: Payment[]; // Added
   addExpense: (expense: Omit<Expense, "id">) => Promise<void>;
   addDebtor: (debtor: Omit<Debtor, "id" | "userId">) => Promise<void>;
+  updateDebtor: (id: string, debtor: Partial<Debtor>) => Promise<void>;
   markDebtorPaid: (id: string) => Promise<void>;
-  recordDebtorPayment: (id: string, paymentAmount: number) => Promise<void>;
+  recordDebtorPayment: (id: string, paymentAmount: number, method?: string, date?: string) => Promise<void>;
   addCategory: (name: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
+  deleteDebtor: (id: string) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  updateExpense: (id: string, expense: Partial<Expense>) => Promise<void>;
   sendFeedback: (data: { name: string; email: string; message: string }) => Promise<void>;
   loading: boolean;
 }
@@ -232,14 +244,66 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     await batch.commit();
   };
 
+  const deleteDebtor = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      const batch = writeBatch(db);
+
+      // Remove related payment history entries for this debtor
+      const qDebtorPayments = query(
+        collection(db, "payments"),
+        where("userId", "==", currentUser.uid),
+        where("debtorId", "==", id)
+      );
+      const paymentSnapshot = await getDocs(qDebtorPayments);
+      paymentSnapshot.forEach((paymentDoc) => {
+        batch.delete(doc(db, "payments", paymentDoc.id));
+      });
+
+      // Remove debtor document
+      batch.delete(doc(db, "debtors", id));
+      await batch.commit();
+    } catch (err) {
+      console.error("Error deleting debtor:", err);
+      throw err;
+    }
+  };
+
   const addExpense = async (expense: Omit<Expense, "id" | "userId">) => {
     if (!currentUser) return;
     await addDoc(collection(db, "expenses"), {
       ...expense,
       splitWith: expense.splitWith || "",
+      tags: expense.tags || [],
+      isRecurring: expense.isRecurring || false,
+      frequency: expense.frequency || "",
+      endDate: expense.endDate || "",
       userId: currentUser.uid,
       createdAt: serverTimestamp(),
     });
+  };
+
+  const deleteExpense = async (id: string) => {
+    if (!currentUser) return;
+    try {
+      await writeBatch(db).delete(doc(db, "expenses", id)).commit();
+    } catch (err) {
+      console.error("Error deleting expense:", err);
+      throw err;
+    }
+  };
+
+  const updateExpense = async (id: string, expense: Partial<Expense>) => {
+    if (!currentUser) return;
+    try {
+      const expenseRef = doc(db, "expenses", id);
+      await updateDoc(expenseRef, {
+        ...expense,
+      });
+    } catch (err) {
+      console.error("Error updating expense:", err);
+      throw err;
+    }
   };
 
   const addDebtor = async (debtor: Omit<Debtor, "id" | "userId">) => {
@@ -250,13 +314,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       expenseId: debtor.expenseId || "",
       notes: debtor.notes || "",
       phoneNumber: debtor.phoneNumber || "",
+      email: debtor.email || "",
       userId: currentUser.uid,
       status: "pending",
       createdAt: serverTimestamp(),
     });
   };
 
-  const recordDebtorPayment = async (id: string, paymentAmount: number) => {
+  const updateDebtor = async (id: string, debtor: Partial<Debtor>) => {
+    if (!currentUser) return;
+    try {
+      const debtorRef = doc(db, "debtors", id);
+      await updateDoc(debtorRef, {
+        ...debtor,
+      });
+    } catch (err) {
+      console.error("Error updating debtor:", err);
+      throw err;
+    }
+  };
+
+  const recordDebtorPayment = async (id: string, paymentAmount: number, method = "cash", date?: string) => {
     if (!currentUser) return;
     try {
       console.log(`Recording payment for debtor ${id}: ${paymentAmount}`);
@@ -283,7 +361,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         debtorId: id,
         debtorName: debtor.debtorName,
         amount: Number(paymentAmount),
-        date: new Date().toISOString().split("T")[0],
+        date: date || new Date().toISOString().split("T")[0],
+        method,
         userId: currentUser.uid,
         createdAt: serverTimestamp(),
       });
@@ -320,6 +399,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         debtorName: debtor.debtorName,
         amount: remainingToPay,
         date: new Date().toISOString().split("T")[0],
+        method: "Full Settlement",
         userId: currentUser.uid,
         createdAt: serverTimestamp(),
       };
@@ -358,10 +438,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         payments,
         addExpense,
         addDebtor,
+        updateDebtor,
         markDebtorPaid,
         recordDebtorPayment,
         addCategory,
         deleteCategory,
+        deleteDebtor,
+        deleteExpense,
+        updateExpense,
         sendFeedback,
         loading,
       }}

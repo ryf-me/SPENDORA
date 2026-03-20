@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
 import { useData } from "../context/DataContext";
-import { User, Mail, Globe, Tag, Trash2, Plus } from "lucide-react";
+import { User, Mail, Globe, Tag, Trash2, Plus, Bell, Clock, Info, Grid3x3 } from "lucide-react";
 
 export default function Settings() {
   const { currentUser, profileData, updateUserProfile } = useAuth();
@@ -21,11 +21,54 @@ export default function Settings() {
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState("");
 
+  const [notifications, setNotifications] = useState({
+    email: true,
+    push: false,
+    inApp: true,
+    earlyWarning: "3",
+    paymentDay: "due",
+  });
+
+  const defaultNotifications = {
+    email: true,
+    push: false,
+    inApp: true,
+    earlyWarning: "3",
+    paymentDay: "due",
+  };
+
+  const persistNotifications = async (next: typeof notifications) => {
+    setNotifications(next);
+    setSaveLoading(true);
+    setSaveMessage({ type: "", text: "" });
+
+    try {
+      await updateUserProfile({
+        name: name || profileData?.name || currentUser?.displayName || "",
+        bio,
+        photoURL: avatarPreview || currentUser?.photoURL || undefined,
+        notifications: next,
+      });
+      setSaveMessage({ type: "success", text: "Notification settings saved." });
+    } catch (err: any) {
+      setSaveMessage({ type: "error", text: err.message || "Failed to save notification settings" });
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
   // Sync state when profile data loads
   React.useEffect(() => {
     if (profileData?.name && !name) setName(profileData.name);
     else if (currentUser?.displayName && !name) setName(currentUser.displayName);
     if (profileData?.bio && !bio) setBio(profileData.bio);
+
+    if (profileData?.notifications) {
+      setNotifications((prev) => ({
+        ...prev,
+        ...profileData.notifications,
+      }));
+    }
   }, [profileData, currentUser]);
 
   const PREDEFINED_AVATARS = [
@@ -105,7 +148,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
+    <div className="w-full max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
       <div>
         <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Settings</h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
@@ -126,6 +169,7 @@ export default function Settings() {
             { key: "profile", icon: User, label: "Profile" },
             { key: "preferences", icon: Globe, label: "Preferences" },
             { key: "categories", icon: Tag, label: "Categories" },
+            { key: "notifications", icon: Bell, label: "Notifications" },
           ].map(({ key, icon: Icon, label }) => (
             <button
               key={key}
@@ -279,9 +323,9 @@ export default function Settings() {
                     className="rounded-xl px-4 py-2 outline-none transition-all appearance-none w-32"
                     style={inputStyle}
                   >
-                    <option value="EUR">EUR (€)</option>
+                    <option value="EUR">EUR (â‚¬)</option>
                     <option value="USD">USD ($)</option>
-                    <option value="GBP">GBP (£)</option>
+                    <option value="GBP">GBP (Â£)</option>
                     <option value="LKR">LKR (Rs.)</option>
                   </select>
                 </div>
@@ -417,8 +461,216 @@ export default function Settings() {
               </div>
             </div>
           )}
+
+          {activeTab === "notifications" && (
+            <div className="w-full space-y-6 animate-in fade-in">
+              <div>
+                <h2 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+                  Notification Settings
+                </h2>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  Manage how and when you get alerted about your recurring expenses.
+                </p>
+              </div>
+
+              <div
+                className="rounded-2xl border px-4 py-5 sm:px-6 sm:py-6"
+                style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}
+              >
+                <div className="flex items-center gap-2.5 mb-4">
+                  <Bell size={16} className="text-blue-600" />
+                  <h3 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Delivery Channels
+                  </h3>
+                </div>
+
+                <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                  <label className="flex items-center justify-between gap-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <Mail size={16} style={{ color: "var(--text-muted)" }} />
+                      <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                        Email Notifications
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={notifications.email}
+                      onChange={(e) => persistNotifications({ ...notifications, email: e.target.checked })}
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between gap-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <Bell size={16} style={{ color: "var(--text-muted)" }} />
+                      <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                        Push Notifications
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={notifications.push}
+                      onChange={(e) => persistNotifications({ ...notifications, push: e.target.checked })}
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between gap-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <Grid3x3 size={16} style={{ color: "var(--text-muted)" }} />
+                      <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                        In-app Alerts
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={notifications.inApp}
+                      onChange={(e) => persistNotifications({ ...notifications, inApp: e.target.checked })}
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div
+                className="rounded-2xl border px-4 py-5 sm:px-6 sm:py-6"
+                style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}
+              >
+                <div className="flex items-center gap-2.5 mb-5">
+                  <Clock size={16} className="text-blue-600" />
+                  <h3 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Timing
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+                      Early Warning
+                    </p>
+                    {[
+                      { label: "3 days before", value: "3" },
+                      { label: "1 day before", value: "1" },
+                    ].map((option) => {
+                      const selected = notifications.earlyWarning === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => persistNotifications({ ...notifications, earlyWarning: option.value })}
+                          className="w-full rounded-xl border px-3 py-2.5 text-sm font-medium flex items-center gap-2"
+                          style={{
+                            borderColor: selected ? "#2563eb" : "var(--border)",
+                            color: "var(--text-primary)",
+                            background: "var(--bg-elevated)",
+                          }}
+                        >
+                          <span
+                            className="h-4 w-4 rounded-full border inline-block"
+                            style={{
+                              borderColor: selected ? "#2563eb" : "var(--border)",
+                              background: selected ? "#2563eb" : "transparent",
+                            }}
+                          />
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
+                      Payment Day
+                    </p>
+                    {[
+                      { label: "On the due date", value: "due" },
+                      { label: "After payment is processed", value: "processed" },
+                    ].map((option) => {
+                      const selected = notifications.paymentDay === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => persistNotifications({ ...notifications, paymentDay: option.value })}
+                          className="w-full rounded-xl border px-3 py-2.5 text-sm font-medium flex items-center gap-2"
+                          style={{
+                            borderColor: selected ? "#2563eb" : "var(--border)",
+                            color: "var(--text-primary)",
+                            background: "var(--bg-elevated)",
+                          }}
+                        >
+                          <span
+                            className="h-4 w-4 rounded border inline-block"
+                            style={{
+                              borderColor: selected ? "#2563eb" : "var(--border)",
+                              background: selected ? "#2563eb" : "transparent",
+                            }}
+                          />
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t flex justify-end items-center gap-3" style={{ borderColor: "var(--border)" }}>
+                  <button
+                    onClick={() => {
+                      const defaults = defaultNotifications;
+                      persistNotifications(defaults);
+                    }}
+                    className="text-sm font-semibold px-4 py-2 rounded-xl border"
+                    style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                  >
+                    Discard Changes
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setSaveLoading(true);
+                      setSaveMessage({ type: "", text: "" });
+                      try {
+                        await updateUserProfile({
+                          name: name || profileData?.name || currentUser?.displayName || "",
+                          bio,
+                          photoURL: avatarPreview || currentUser?.photoURL || undefined,
+                          notifications,
+                        });
+                        setSaveMessage({ type: "success", text: "Notification settings saved." });
+                      } catch (err: any) {
+                        setSaveMessage({ type: "error", text: err.message || "Failed to save notification settings" });
+                      } finally {
+                        setSaveLoading(false);
+                      }
+                    }}
+                    className="px-6 py-2.5 rounded-xl text-sm font-medium transition-colors text-white"
+                    style={{ background: "#2563eb" }}
+                  >
+                    {saveLoading ? "Saving..." : "Save Settings"}
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className="rounded-2xl p-5 border flex items-start gap-3"
+                style={{ background: "rgba(37,99,235,0.10)", borderColor: "rgba(37,99,235,0.25)" }}
+              >
+                <div className="w-8 h-8 rounded-full bg-blue-600/15 flex items-center justify-center">
+                  <Info size={14} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                    Pro Tip
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    Enable push notifications on your mobile device to receive real-time updates while on the go.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+

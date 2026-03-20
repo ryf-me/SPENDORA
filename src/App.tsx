@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import AddExpense from "./pages/AddExpense";
 import Debtors from "./pages/Debtors";
+import DebtorDetail from "./pages/DebtorDetail";
 import ExpenseHistory from "./pages/ExpenseHistory";
 import Calendar from "./pages/Calendar";
 import AIAssistant from "./pages/AIAssistant";
@@ -20,6 +21,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Feedback from "./pages/Feedback";
 import Reports from "./pages/Reports";
+import ExpenseDetail from "./pages/ExpenseDetail";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, loading } = useAuth();
@@ -60,7 +62,9 @@ export default function App() {
               >
                 <Route index element={<Dashboard />} />
                 <Route path="expenses" element={<AddExpense />} />
+                <Route path="expenses/:id" element={<ExpenseDetail />} />
                 <Route path="debtors" element={<Debtors />} />
+                <Route path="debtors/:id" element={<DebtorDetail />} />
                 <Route path="history" element={<ExpenseHistory />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="ai-assistant" element={<AIAssistant />} />

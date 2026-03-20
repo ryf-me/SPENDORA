@@ -1,16 +1,39 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useData } from "../context/DataContext";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { Filter, Search, Download, Calendar, Tag, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { formatCurrency } from "../utils/format";
 
 export default function ExpenseHistory() {
+  const navigate = useNavigate();
   const { expenses, payments, loading } = useData();
   const { currency: preferredCurrency } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+
+  const paymentMethodLabel = (method?: string) => {
+    switch (method) {
+      case "credit_card":
+        return "Credit Card";
+      case "debit_card":
+        return "Debit Card";
+      case "bank_transfer":
+        return "Bank Transfer";
+      case "cash":
+        return "Cash";
+      case "cheque":
+        return "Cheque";
+      case "online_payment":
+        return "Online Payment";
+      case "full_settlement":
+        return "Full Settlement";
+      default:
+        return "Not set";
+    }
+  };
 
   if (loading) {
     return <div style={{ color: "var(--text-primary)" }}>Loading history...</div>;
@@ -34,7 +57,8 @@ export default function ExpenseHistory() {
     const merchant = item.merchant || "";
     const matchesSearch =
       subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      merchant.toLowerCase().includes(searchTerm.toLowerCase());
+      merchant.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      paymentMethodLabel(((item as any).paymentMethod || (item as any).method)).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter ? item.category === categoryFilter : true;
     const matchesType = typeFilter ? item.type === typeFilter : true;
     const matchesDate = dateFilter ? item.date === dateFilter : true;
@@ -151,7 +175,7 @@ export default function ExpenseHistory() {
           <table className="w-full text-left text-sm" style={{ color: "var(--text-secondary)" }}>
             <thead style={{ background: "var(--bg-elevated)", borderBottom: "1px solid var(--border)" }}>
               <tr>
-                {["Date", "Type", "Details", "Category", "Amount"].map((h) => (
+                {["Date", "Type", "Details", "Category", "Payment Method", "Amount"].map((h) => (
                   <th
                     key={h}
                     className={`px-6 py-4 font-medium ${h === "Amount" ? "text-right" : ""}`}
@@ -165,7 +189,7 @@ export default function ExpenseHistory() {
             <tbody>
               {filteredHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center" style={{ color: "var(--text-muted)" }}>
+                  <td colSpan={6} className="px-6 py-12 text-center" style={{ color: "var(--text-muted)" }}>
                     <div className="flex flex-col items-center justify-center">
                       <Filter size={48} className="mb-4 opacity-30" />
                       <p className="text-lg font-medium" style={{ color: "var(--text-secondary)" }}>
@@ -178,7 +202,12 @@ export default function ExpenseHistory() {
                 filteredHistory.map((item) => (
                   <tr
                     key={item.id}
-                    className="transition-colors"
+                    onClick={() => {
+                      if (item.type === "Expense") {
+                        navigate(`/expenses/${item.id}`);
+                      }
+                    }}
+                    className={`transition-all ${item.type === "Expense" ? "cursor-pointer hover:shadow-md" : ""}`}
                     style={{ borderBottom: "1px solid var(--border)" }}
                     onMouseEnter={(e) =>
                       ((e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)")
@@ -222,6 +251,9 @@ export default function ExpenseHistory() {
                         {item.category}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-xs" style={{ color: "var(--text-secondary)" }}>
+                      {paymentMethodLabel(((item as any).paymentMethod || (item as any).method))}
+                    </td>
                     <td className={`px-6 py-4 text-right font-bold ${item.type === "Payment" ? "text-green-500" : "text-red-400"}`}>
                       {item.type === "Payment" ? "+" : "-"} {formatCurrency(item.amount, preferredCurrency)}
                     </td>
@@ -235,3 +267,4 @@ export default function ExpenseHistory() {
     </div>
   );
 }
+

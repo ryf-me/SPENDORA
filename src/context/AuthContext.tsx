@@ -58,6 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: user.email,
               createdAt: serverTimestamp(),
               currency: "LKR",
+              notifications: {
+                email: true,
+                push: false,
+                inApp: true,
+                earlyWarning: "3",
+                paymentDay: "due",
+              },
             };
             await setDoc(userRef, initialData);
             setProfileData(initialData);
@@ -102,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await firebaseSignOut(auth);
   };
 
-  const updateUserProfile = async ({ name, bio, photoURL, avatarFile }: { name: string; bio?: string; photoURL?: string; avatarFile?: File }) => {
+  const updateUserProfile = async ({ name, bio, photoURL, avatarFile, notifications }: { name: string; bio?: string; photoURL?: string; avatarFile?: File; notifications?: { email?: boolean; push?: boolean; inApp?: boolean; earlyWarning?: string; paymentDay?: string; } }) => {
     console.log("Starting profile update...");
     const user = auth.currentUser;
     if (!user) {
@@ -149,12 +156,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("Updating user doc in Firestore...");
     try {
       const userRef = doc(db, "users", user.uid);
-      const updateData = {
+      const updateData: any = {
         name,
         bio: bio || "",
         photoURL: finalPhotoURL || null,
         updatedAt: serverTimestamp(),
       };
+
+      if (notifications) {
+        updateData.notifications = {
+          email: notifications.email ?? true,
+          push: notifications.push ?? false,
+          inApp: notifications.inApp ?? true,
+          earlyWarning: notifications.earlyWarning ?? "3",
+          paymentDay: notifications.paymentDay ?? "due",
+        };
+      }
+
       await setDoc(userRef, updateData, { merge: true });
       console.log("Firestore document updated successfully");
 
