@@ -84,6 +84,13 @@ export default function AIAssistant() {
         }),
       });
 
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error(
+          "The AI backend is not available or returned an invalid response."
+        );
+      }
+
       const responseData = await response.json();
       if (!response.ok) {
         throw new Error(responseData?.error || "Failed to connect to AI service.");

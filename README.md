@@ -55,7 +55,7 @@ Spendora is a modern, AI-powered expense tracking application built with React a
 - **Frontend**: React 19, TypeScript, Vite
 - **Styling**: Tailwind CSS v4, Lucide Icons
 - **Backend**: Firebase (Firestore, Auth, Storage)
-- **AI**: Google Gemini API
+- **AI**: OpenRouter
 - **Charts**: Recharts
 - **Deployment**: Vercel
 
@@ -65,7 +65,7 @@ Spendora is a modern, AI-powered expense tracking application built with React a
 - Node.js (v18 or higher)
 - npm or yarn
 - Firebase project
-- Google AI Studio API key
+- OpenRouter API key
 
 ### Installation
 
@@ -82,7 +82,7 @@ Spendora is a modern, AI-powered expense tracking application built with React a
 
 3. **Environment Setup**
    - Copy `.env.example` to `.env.local`
-   - Fill in your Firebase and Gemini API keys:
+   - Fill in your Firebase config and server-side AI key:
    ```env
    VITE_FIREBASE_API_KEY=your_firebase_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -91,7 +91,7 @@ Spendora is a modern, AI-powered expense tracking application built with React a
    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
    VITE_FIREBASE_APP_ID=your_app_id
    VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
-   GEMINI_API_KEY=your_server_gemini_api_key
+   OPENROUTER_API_KEY=your_server_openrouter_api_key
    ```
 
 4. **Run locally**
@@ -125,8 +125,10 @@ npm run preview
    VITE_FIREBASE_MESSAGING_SENDER_ID
    VITE_FIREBASE_APP_ID
    VITE_FIREBASE_MEASUREMENT_ID
-   GEMINI_API_KEY
+   OPENROUTER_API_KEY
    ```
+
+   Firebase note: this repo includes [storage.rules](./storage.rules) and [firestore.rules](./firestore.rules). Deploy both rulesets before exposing uploads publicly.
 
 3. **Deploy**
    - Vercel will build and deploy automatically on git push

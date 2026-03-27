@@ -22,7 +22,19 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  updateUserProfile: (data: { name: string; bio?: string; avatarFile?: File }) => Promise<void>;
+  updateUserProfile: (data: {
+    name: string;
+    bio?: string;
+    photoURL?: string;
+    avatarFile?: File;
+    notifications?: {
+      email?: boolean;
+      push?: boolean;
+      inApp?: boolean;
+      earlyWarning?: string;
+      paymentDay?: string;
+    };
+  }) => Promise<void>;
   profileData: any;
   isMock: boolean;
 }
@@ -99,7 +111,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await firebaseSignOut(auth);
   };
 
-  const updateUserProfile = async ({ name, bio, photoURL, avatarFile, notifications }: { name: string; bio?: string; photoURL?: string; avatarFile?: File; notifications?: { email?: boolean; push?: boolean; inApp?: boolean; earlyWarning?: string; paymentDay?: string; } }) => {
+  const updateUserProfile = async ({
+    name,
+    bio,
+    photoURL,
+    avatarFile,
+    notifications,
+  }: {
+    name: string;
+    bio?: string;
+    photoURL?: string;
+    avatarFile?: File;
+    notifications?: {
+      email?: boolean;
+      push?: boolean;
+      inApp?: boolean;
+      earlyWarning?: string;
+      paymentDay?: string;
+    };
+  }) => {
     const user = auth.currentUser;
     if (!user) {
       console.error("Update failed: No user found in auth.currentUser");
@@ -111,13 +141,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Handle avatar upload (if still used elsewhere)
     if (avatarFile) {
       try {
+        if (!avatarFile.type.startsWith("image/")) {
+          throw new Error("Only image uploads are allowed.");
+        }
+
+        if (avatarFile.size > 5 * 1024 * 1024) {
+          throw new Error("Avatar uploads must be 5 MB or smaller.");
+        }
+
         // Use a timestamp to prevent cache issues and identify unique uploads
         const timestamp = Date.now();
-        const storageRef = ref(storage, `avatars/${user.uid}_${timestamp}`);
+        const storageRef = ref(storage, `avatars/${user.uid}/avatar-${timestamp}`);
 
         await uploadBytes(storageRef, avatarFile);
 
-        photoURL = await getDownloadURL(storageRef);
+        finalPhotoURL = await getDownloadURL(storageRef);
       } catch (uploadErr: any) {
         console.error("Storage Error during upload/URL fetch:", uploadErr);
         throw new Error(`Failed to upload image: ${uploadErr.message || "Unknown storage error"}`);
