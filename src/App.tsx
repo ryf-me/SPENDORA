@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
 import { AppProvider, useApp } from "./context/AppContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import Layout from "./components/Layout";
 import { Loader2 } from "lucide-react";
 
@@ -15,6 +16,7 @@ import Debtors from "./pages/Debtors";
 import DebtorDetail from "./pages/DebtorDetail";
 import ExpenseHistory from "./pages/ExpenseHistory";
 import Calendar from "./pages/Calendar";
+import RecurringExpenses from "./pages/RecurringExpenses";
 import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
 import About from "./pages/About";
@@ -49,34 +51,37 @@ export default function App() {
     <AppProvider>
       <AuthProvider>
         <DataProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/"
-                element={
-                  <PrivateRoute>
-                    <Layout />
-                  </PrivateRoute>
-                }
-              >
-                <Route index element={<Dashboard />} />
-                <Route path="expenses" element={<AddExpense />} />
-                <Route path="expenses/:id" element={<ExpenseDetail />} />
-                <Route path="debtors" element={<Debtors />} />
-                <Route path="debtors/:id" element={<DebtorDetail />} />
-                <Route path="history" element={<ExpenseHistory />} />
-                <Route path="calendar" element={<Calendar />} />
-                <Route path="ai-assistant" element={<AIAssistant />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="about" element={<About />} />
-                <Route path="contact" element={<Contact />} />
-                <Route path="feedback" element={<Feedback />} />
-                <Route path="reports" element={<Reports />} />
-              </Route>
-            </Routes>
-            <Analytics />
-          </BrowserRouter>
+          <NotificationProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/"
+                  element={
+                    <PrivateRoute>
+                      <Layout />
+                    </PrivateRoute>
+                  }
+                >
+                  <Route index element={<Dashboard />} />
+                  <Route path="expenses" element={<AddExpense />} />
+                  <Route path="expenses/:id" element={<ExpenseDetail />} />
+                  <Route path="debtors" element={<Debtors />} />
+                  <Route path="debtors/:id" element={<DebtorDetail />} />
+                  <Route path="history" element={<ExpenseHistory />} />
+                  <Route path="calendar" element={<Calendar />} />
+                  <Route path="recurring" element={<RecurringExpenses />} />
+                  <Route path="ai-assistant" element={<AIAssistant />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="about" element={<About />} />
+                  <Route path="contact" element={<Contact />} />
+                  <Route path="feedback" element={<Feedback />} />
+                  <Route path="reports" element={<Reports />} />
+                </Route>
+              </Routes>
+              <Analytics />
+            </BrowserRouter>
+          </NotificationProvider>
         </DataProvider>
       </AuthProvider>
     </AppProvider>

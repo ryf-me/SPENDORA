@@ -82,7 +82,7 @@ export default function About() {
 
             <div className="text-center pb-20">
                 <p className="text-sm uppercase tracking-[0.2em] font-bold opacity-30" style={{ color: "var(--text-muted)" }}>
-                    Developed with ❤️ by Insath Raif
+                    Developed by Insath Raif
                 </p>
             </div>
         </div>

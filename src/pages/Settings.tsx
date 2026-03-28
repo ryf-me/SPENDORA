@@ -4,6 +4,47 @@ import { useApp } from "../context/AppContext";
 import { useData } from "../context/DataContext";
 import { User, Mail, Globe, Tag, Trash2, Plus, Bell, Clock, Info, Grid3x3 } from "lucide-react";
 
+const avatarUrl = (style: string, seed: string) =>
+  `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&size=128&backgroundColor=transparent`;
+
+const PREDEFINED_AVATARS = [
+  { name: "Lorelei Aaliyah", url: avatarUrl("lorelei", "Aaliyah") },
+  { name: "Lorelei Mateo", url: avatarUrl("lorelei", "Mateo") },
+  { name: "Lorelei Priya", url: avatarUrl("lorelei", "Priya") },
+  { name: "Lorelei Zara", url: avatarUrl("lorelei", "Zara") },
+  { name: "Lorelei Yara", url: avatarUrl("lorelei", "Yara") },
+  { name: "Lorelei Omar", url: avatarUrl("lorelei", "Omar") },
+  { name: "Lorelei Layla", url: avatarUrl("lorelei", "Layla") },
+  { name: "Lorelei Karim", url: avatarUrl("lorelei", "Karim") },
+
+  { name: "Lorelei Neutral Noor", url: avatarUrl("lorelei-neutral", "Noor") },
+  { name: "Lorelei Neutral Sam", url: avatarUrl("lorelei-neutral", "Sam") },
+  { name: "Lorelei Neutral Alex", url: avatarUrl("lorelei-neutral", "Alex") },
+  { name: "Lorelei Neutral Dani", url: avatarUrl("lorelei-neutral", "Dani") },
+  { name: "Lorelei Neutral Jules", url: avatarUrl("lorelei-neutral", "Jules") },
+  { name: "Lorelei Neutral Rayan", url: avatarUrl("lorelei-neutral", "Rayan") },
+  { name: "Lorelei Neutral Milan", url: avatarUrl("lorelei-neutral", "Milan") },
+  { name: "Lorelei Neutral Sky", url: avatarUrl("lorelei-neutral", "Sky") },
+
+  { name: "Notionists Amina", url: avatarUrl("notionists", "Amina") },
+  { name: "Notionists Ravi", url: avatarUrl("notionists", "Ravi") },
+  { name: "Notionists Leena", url: avatarUrl("notionists", "Leena") },
+  { name: "Notionists Tariq", url: avatarUrl("notionists", "Tariq") },
+  { name: "Notionists Inaya", url: avatarUrl("notionists", "Inaya") },
+  { name: "Notionists Jonah", url: avatarUrl("notionists", "Jonah") },
+  { name: "Notionists Maya", url: avatarUrl("notionists", "Maya") },
+  { name: "Notionists Kabir", url: avatarUrl("notionists", "Kabir") },
+
+  { name: "Notionists Neutral Ash", url: avatarUrl("notionists-neutral", "Ash") },
+  { name: "Notionists Neutral Sage", url: avatarUrl("notionists-neutral", "Sage") },
+  { name: "Notionists Neutral Avery", url: avatarUrl("notionists-neutral", "Avery") },
+  { name: "Notionists Neutral Remy", url: avatarUrl("notionists-neutral", "Remy") },
+  { name: "Notionists Neutral Taylor", url: avatarUrl("notionists-neutral", "Taylor") },
+  { name: "Notionists Neutral Jordan", url: avatarUrl("notionists-neutral", "Jordan") },
+  { name: "Notionists Neutral Noor", url: avatarUrl("notionists-neutral", "Noor") },
+  { name: "Notionists Neutral Kai", url: avatarUrl("notionists-neutral", "Kai") },
+];
+
 export default function Settings() {
   const { currentUser, profileData, updateUserProfile } = useAuth();
   const { theme, setTheme, currency, setCurrency, timezone, setTimezone } = useApp();
@@ -70,17 +111,6 @@ export default function Settings() {
       }));
     }
   }, [profileData, currentUser]);
-
-  const PREDEFINED_AVATARS = [
-    { name: "Luffy", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=Luffy" },
-    { name: "Naruto", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=Naruto" },
-    { name: "Ash", url: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Ash" },
-    { name: "Klaus", url: "https://api.dicebear.com/7.x/avataaars/svg?seed=Klaus" },
-    { name: "Buster", url: "https://api.dicebear.com/7.x/bottts/svg?seed=Buster" },
-    { name: "Sasha", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=Sasha" },
-    { name: "Felix", url: "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Felix" },
-    { name: "Goku", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=Goku" },
-  ];
 
   const handleAvatarSelect = (url: string) => {
     setAvatarPreview(url);
@@ -210,23 +240,47 @@ export default function Settings() {
                     <div>
                       <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Select Your Vibe</h3>
                       <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        Pick an anime or cartoon character to represent you!
+                        Curated from DiceBear Lorelei, Lorelei Neutral, Notionists, and Notionists Neutral.
                       </p>
                     </div>
-                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+                    <div
+                      className="rounded-2xl border p-4"
+                      style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
+                          Avatar Library
+                        </p>
+                        <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                          {PREDEFINED_AVATARS.length} presets
+                        </p>
+                      </div>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
                       {PREDEFINED_AVATARS.map((avatar) => (
                         <button
                           key={avatar.url}
+                          type="button"
                           onClick={() => handleAvatarSelect(avatar.url)}
                           title={avatar.name}
-                          className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-110 active:scale-95 shadow-md ${(avatarPreview === avatar.url || (!avatarPreview && currentUser?.photoURL === avatar.url))
+                          className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-[1.04] active:scale-[0.98] shadow-md ${(avatarPreview === avatar.url || (!avatarPreview && currentUser?.photoURL === avatar.url))
                             ? "border-[var(--accent)] scale-105 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                             : "border-[var(--border)] opacity-60 hover:opacity-100 hover:border-[var(--accent)]"
                             }`}
+                          style={{ background: "linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-elevated) 100%)" }}
                         >
-                          <img src={avatar.url} alt={avatar.name} className="w-full h-full object-cover" />
+                          <img src={avatar.url} alt={avatar.name} className="w-full h-full object-contain p-2" />
+                          <span
+                            className="absolute inset-x-0 bottom-0 px-1.5 py-1 text-[10px] font-semibold truncate"
+                            style={{
+                              color: "#fff",
+                              background: "linear-gradient(180deg, transparent 0%, rgba(15,23,42,0.85) 100%)",
+                            }}
+                          >
+                            {avatar.name}
+                          </span>
                         </button>
                       ))}
+                    </div>
                     </div>
                   </div>
                 </div>
@@ -528,6 +582,11 @@ export default function Settings() {
                     />
                   </label>
                 </div>
+
+                <div className="mt-4 rounded-xl border px-3 py-3 text-xs leading-relaxed" style={{ borderColor: "var(--border)", background: "var(--bg-elevated)", color: "var(--text-muted)" }}>
+                  In-app alerts are live and appear from the notification bell in the app.
+                  Email and push preferences are saved, but delivery for those channels is not wired yet.
+                </div>
               </div>
 
               <div
@@ -660,7 +719,7 @@ export default function Settings() {
                     Pro Tip
                   </p>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    Enable push notifications on your mobile device to receive real-time updates while on the go.
+                    In-app reminders now appear from the notification bell and follow your early warning preferences.
                   </p>
                 </div>
               </div>

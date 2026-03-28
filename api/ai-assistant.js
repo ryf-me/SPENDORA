@@ -15,6 +15,8 @@ if (!globalThis.__spendoraRateLimitStore) {
   globalThis.__spendoraRateLimitStore = RATE_LIMIT_STORE;
 }
 
+const ALLOWED_CURRENCIES = new Set(["LKR", "USD", "EUR", "GBP"]);
+
 function readHeader(req, headerName) {
   const value = req.headers?.[headerName];
   return Array.isArray(value) ? value[0] : value;
@@ -96,6 +98,54 @@ function sanitizeCategoryTotals(input) {
   return Object.fromEntries(safeEntries);
 }
 
+function sanitizeCurrency(value) {
+  if (typeof value !== "string") {
+    return "LKR";
+  }
+
+  const normalized = value.trim().toUpperCase();
+  return ALLOWED_CURRENCIES.has(normalized) ? normalized : "LKR";
+}
+
+function formatCurrencyValue(amount, currency) {
+  if (currency === "LKR") {
+    return `Rs. ${Number(amount || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+
+  try {
+    return Number(amount || 0).toLocaleString(undefined, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  } catch {
+    return `${currency} ${Number(amount || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
+}
+
+function buildFormattedSummary(context) {
+  const categoryLines = Object.entries(context.expenseSummary.categoryTotals)
+    .map(([category, total]) => `${category}: ${formatCurrencyValue(total, context.preferredCurrency)}`);
+
+  return [
+    `Preferred currency: ${context.preferredCurrency}`,
+    `Total expenses: ${formatCurrencyValue(context.expenseSummary.totalExpense, context.preferredCurrency)}`,
+    `Expense count: ${context.expenseSummary.expenseCount}`,
+    ...(categoryLines.length > 0 ? ["Expense categories:", ...categoryLines] : []),
+    `Total debt: ${formatCurrencyValue(context.debtorSummary.totalDebt, context.preferredCurrency)}`,
+    `Total collected: ${formatCurrencyValue(context.debtorSummary.totalCollected, context.preferredCurrency)}`,
+    `Remaining balance: ${formatCurrencyValue(context.debtorSummary.remainingBalance, context.preferredCurrency)}`,
+    `Pending debtors: ${context.debtorSummary.pendingCount}`,
+  ].join("\n");
+}
+
 function sanitizeContext(input) {
   const context = input && typeof input === "object" && !Array.isArray(input) ? input : {};
   const expenseSummary =
@@ -108,6 +158,7 @@ function sanitizeContext(input) {
       : {};
 
   const safeContext = {
+    preferredCurrency: sanitizeCurrency(context.preferredCurrency),
     expenseSummary: {
       totalExpense: clampNumber(expenseSummary.totalExpense),
       expenseCount: clampNumber(expenseSummary.expenseCount, {
@@ -317,12 +368,19 @@ export default async function handler(req, res) {
   }
 
   const safeContext = sanitizeContext(body.context);
+  const formattedSummary = buildFormattedSummary(safeContext);
   const prompt = `You are SPENDORA's financial assistant.
 Use only the structured summary below and do not request personally identifying information.
 Keep responses concise, practical, and privacy-aware.
+Use plain text only. Do not use markdown syntax such as **, __, #, bullet markers, or numbered list markers.
+When referring to money, always format every amount in the user's preferred currency: ${safeContext.preferredCurrency}.
+Do not return raw bare numbers for money.
 
 Structured Summary:
 ${JSON.stringify(safeContext, null, 2)}
+
+Formatted Monetary Summary:
+${formattedSummary}
 
 User Question:
 ${parsedMessage.value}`;

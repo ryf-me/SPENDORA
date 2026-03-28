@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useData, Expense } from "../context/DataContext";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
-import { X, Plus, Calendar, ChevronDown, Info, UploadCloud, Tag as TagIcon, Trash2 } from "lucide-react";
+import { X, Plus, Calendar, ChevronDown, Info, Tag as TagIcon, Trash2 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { format } from "date-fns";
 import IconSelector from "../components/IconSelector";
@@ -341,24 +341,6 @@ export default function AddExpense() {
                   className="w-full rounded-xl px-4 py-3 outline-none border transition-all focus:ring-2 focus:ring-blue-500/20 resize-none"
                   style={{ background: "var(--bg-base)", borderColor: "var(--border)", color: "var(--text-primary)" }}
                 />
-              </div>
-            </div>
-
-            {/* Receipt Area */}
-            <div 
-              className="rounded-2xl p-8 border shadow-sm"
-              style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}
-            >
-              <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Receipt Attachment</h3>
-              <div 
-                className="border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/10 transition-all group"
-                style={{ borderColor: "var(--border)", background: "var(--bg-base)" }}
-              >
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <UploadCloud size={24} className="text-blue-600" />
-                </div>
-                <p className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Click to upload or drag and drop</p>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>PDF, JPG, PNG up to 10MB</p>
               </div>
             </div>
 

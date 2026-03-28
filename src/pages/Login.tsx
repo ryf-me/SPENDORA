@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
@@ -15,9 +15,15 @@ export default function Login() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { login, register, resetPassword, loginWithGoogle } = useAuth();
+  const { login, register, resetPassword, loginWithGoogle, currentUser, loading: authLoading } = useAuth();
   const { theme } = useApp();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && currentUser) {
+      navigate("/", { replace: true });
+    }
+  }, [authLoading, currentUser, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,12 +37,10 @@ export default function Login() {
         setMessage("Check your inbox for a password reset email");
       } else if (isLogin) {
         await login(email, password);
-        navigate("/");
       } else {
         if (!name.trim()) throw new Error("Full name is required");
         if (password !== confirmPassword) throw new Error("Passwords do not match");
         await register(name, email, password);
-        navigate("/");
       }
     } catch (err: any) {
       setError(err.message || "Failed to authenticate");
@@ -50,9 +54,9 @@ export default function Login() {
       setError("");
       setLoading(true);
       await loginWithGoogle();
-      navigate("/");
     } catch (err: any) {
       setError(err.message || "Failed to authenticate with Google");
+    } finally {
       setLoading(false);
     }
   };

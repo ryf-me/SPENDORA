@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
+import NotificationCenter from "./NotificationCenter";
 import {
   Home,
   CreditCard,
@@ -10,6 +11,7 @@ import {
   Users,
   History,
   Calendar as CalendarIcon,
+  Repeat2,
   Bot,
   Menu,
   X,
@@ -40,6 +42,7 @@ export default function Layout() {
     { to: "/debtors", icon: Users, label: "Debtors" },
     { to: "/history", icon: History, label: "History" },
     { to: "/calendar", icon: CalendarIcon, label: "Calendar" },
+    { to: "/recurring", icon: Repeat2, label: "Recurring" },
     { to: "/ai-assistant", icon: Bot, label: "AI Assistant" },
     { to: "/reports", icon: FileText, label: "Reports" },
     { to: "/settings", icon: Settings, label: "Settings" },
@@ -67,6 +70,7 @@ export default function Layout() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <NotificationCenter />
           <button
             onClick={toggleTheme}
             className="p-2 rounded-xl transition-colors"
@@ -202,6 +206,9 @@ export default function Layout() {
         className="flex-1 overflow-y-auto p-4 md:p-8 pt-20 md:pt-8 w-full transition-colors duration-300"
         style={{ background: "var(--bg-base)" }}
       >
+        <div className="mb-4 hidden justify-end md:flex">
+          <NotificationCenter />
+        </div>
         <Outlet />
       </main>
     </div>

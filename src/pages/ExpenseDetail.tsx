@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCurrency } from "../utils/format";
+import { getRecurringStatus } from "../utils/recurring";
 
 export default function ExpenseDetail() {
   const { id } = useParams<{ id: string }>();
@@ -228,6 +229,12 @@ export default function ExpenseDetail() {
     }
   };
 
+  const handleToggleRecurringStatus = async () => {
+    if (!expense.isRecurring) return;
+    const nextStatus = getRecurringStatus(expense) === "paused" ? "active" : "paused";
+    await updateExpense(expense.id, { recurringStatus: nextStatus });
+  };
+
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
@@ -303,8 +310,12 @@ export default function ExpenseDetail() {
               <>
                 <h1 className="text-3xl font-extrabold mb-1" style={{ color: "var(--text-primary)" }}>{expense.subject}</h1>
                 <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[11px] font-bold uppercase tracking-wider border border-green-100">
-                    • Active
+                  <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${
+                    expense.recurringStatus === "paused"
+                      ? "bg-amber-50 text-amber-600 border-amber-100"
+                      : "bg-green-50 text-green-600 border-green-100"
+                  }`}>
+                    {expense.recurringStatus === "paused" ? "Paused" : "Active"}
                   </span>
                   <span className="flex items-center gap-1.5 text-sm" style={{ color: "var(--text-muted)" }}>
                     <RefreshCw size={14} />
@@ -345,8 +356,13 @@ export default function ExpenseDetail() {
                 <Edit3 size={18} /> Edit
               </button>
               {expense.isRecurring && (
-                <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-all" style={{ background: "var(--bg-muted)", borderColor: "var(--border)", color: "var(--text-primary)" }}>
-                  <Pause size={18} /> Pause
+                <button
+                  onClick={handleToggleRecurringStatus}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-all"
+                  style={{ background: "var(--bg-muted)", borderColor: "var(--border)", color: "var(--text-primary)" }}
+                >
+                  {expense.recurringStatus === "paused" ? <Play size={18} /> : <Pause size={18} />}
+                  {expense.recurringStatus === "paused" ? "Resume" : "Pause"}
                 </button>
               )}
               <button 

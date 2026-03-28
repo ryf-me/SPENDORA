@@ -14,6 +14,9 @@ import {
   writeBatch,
 } from "firebase/firestore";
 
+export type RecurringFrequency = "Weekly" | "Monthly" | "Yearly";
+export type RecurringStatus = "active" | "paused";
+
 export interface Expense {
   id: string;
   userId: string;
@@ -33,10 +36,12 @@ export interface Expense {
   addToReport: boolean;
   tags: string[]; // Added
   isRecurring: boolean; // Added
-  frequency?: string; // Added
+  frequency?: RecurringFrequency | ""; // Added
   endDate?: string; // Added
+  recurringStatus?: RecurringStatus;
+  recurringNotifications?: boolean;
   icon?: string; // Added for custom icon selection
-  paymentMethod?: "credit_card" | "debit_card" | "bank_transfer" | "cash" | "cheque";
+  paymentMethod?: "" | "credit_card" | "debit_card" | "bank_transfer" | "cash" | "cheque";
 }
 
 export interface Debtor {
@@ -282,8 +287,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       splitWith: expense.splitWith || "",
       tags: expense.tags || [],
       isRecurring: expense.isRecurring || false,
-      frequency: expense.frequency || "",
+      frequency: expense.isRecurring ? (expense.frequency || "Monthly") : "",
       endDate: expense.endDate || "",
+      recurringNotifications: expense.isRecurring ? (expense.recurringNotifications ?? true) : false,
+      ...(expense.isRecurring ? { recurringStatus: expense.recurringStatus || "active" } : {}),
       userId: currentUser.uid,
       createdAt: serverTimestamp(),
     });

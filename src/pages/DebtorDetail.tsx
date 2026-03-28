@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { differenceInCalendarDays, startOfDay } from "date-fns";
 import { useData } from "../context/DataContext";
+import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
 import {
   Banknote,
@@ -20,9 +22,11 @@ import {
   Phone,
   Scale,
   Send,
+  Sparkles,
   Trash2,
   TriangleAlert,
   X,
+  Loader2,
 } from "lucide-react";
 import { formatCurrency } from "../utils/format";
 import jsPDF from "jspdf";
@@ -53,10 +57,55 @@ const methodLabel = (method?: string) => {
   }
 };
 
+function getDebtorStatusMeta(debtor: {
+  status: "pending" | "paid";
+  date: string;
+  amount: number;
+  paidAmount: number;
+}) {
+  if (debtor.status === "paid" || Math.max(0, Number(debtor.amount || 0) - Number(debtor.paidAmount || 0)) <= 0) {
+    return {
+      label: "Paid",
+      badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    };
+  }
+
+  const dueDate = new Date(`${debtor.date}T00:00:00`);
+  if (Number.isNaN(dueDate.getTime())) {
+    return {
+      label: "Pending",
+      badgeClass: "bg-amber-100 text-amber-800 border-amber-300",
+    };
+  }
+
+  const dayDiff = differenceInCalendarDays(startOfDay(new Date()), startOfDay(dueDate));
+
+  if (dayDiff > 0) {
+    return {
+      label: `Overdue by ${dayDiff} day${dayDiff === 1 ? "" : "s"}`,
+      badgeClass: "bg-red-100 text-red-800 border-red-300",
+    };
+  }
+
+  if (dayDiff === 0) {
+    return {
+      label: "Due today",
+      badgeClass: "bg-orange-100 text-orange-800 border-orange-300",
+    };
+  }
+
+  const daysRemaining = Math.abs(dayDiff);
+  return {
+    label: `Due in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}`,
+    badgeClass: "bg-amber-100 text-amber-800 border-amber-300",
+  };
+}
+
 export default function DebtorDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { debtors, payments, recordDebtorPayment, deleteDebtor, updateDebtor } = useData();
+  const { currentUser } = useAuth();
   const { currency } = useApp();
 
   const debtor = debtors.find((d) => d.id === id);
@@ -80,6 +129,9 @@ export default function DebtorDetail() {
 
   const [reminderChannel, setReminderChannel] = useState<"whatsapp" | "email" | "sms">("email");
   const [reminderMessage, setReminderMessage] = useState("");
+  const [reminderPrompt, setReminderPrompt] = useState("");
+  const [generatingReminder, setGeneratingReminder] = useState(false);
+  const [reminderError, setReminderError] = useState("");
 
   const [editDebtorName, setEditDebtorName] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -111,6 +163,16 @@ export default function DebtorDetail() {
   const totalDebt = debtor.amount;
   const amountPaid = debtor.paidAmount || 0;
   const remaining = Math.max(0, totalDebt - amountPaid);
+  const statusMeta = getDebtorStatusMeta({
+    status: debtor.status,
+    date: debtor.date,
+    amount: totalDebt,
+    paidAmount: amountPaid,
+  });
+  const defaultReminderMessage = `Dear ${debtor.debtorName},\n\nThis is a reminder for your outstanding balance of ${formatCurrency(
+    remaining,
+    currency,
+  )}.\n\nPlease make payment at your earliest convenience.\n\nSincerely,\nYour Business Name`;
 
   const openEditModal = () => {
     setEditDebtorName(debtor.debtorName || "");
@@ -176,14 +238,77 @@ export default function DebtorDetail() {
   };
 
   const openReminder = () => {
-    setReminderMessage(
-      `Dear ${debtor.debtorName},\n\nThis is a reminder for your outstanding balance of ${formatCurrency(
-        remaining,
-        currency,
-      )}.\n\nPlease make payment at your earliest convenience.\n\nSincerely,\nYour Business Name`,
-    );
+    setReminderMessage(defaultReminderMessage);
+    setReminderPrompt("");
+    setReminderError("");
     setReminderChannel("email");
     setShowReminderModal(true);
+  };
+
+  const generateReminderWithAI = async () => {
+    if (!currentUser || generatingReminder) return;
+
+    setGeneratingReminder(true);
+    setReminderError("");
+
+    const guidance = reminderPrompt.trim();
+    const userRequest = guidance
+      ? `Write a payment reminder message for this debtor. User instructions: ${guidance}`
+      : "Write a payment reminder message for this debtor. Keep it professional, concise, and ready to send.";
+
+    try {
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch("/api/ai-assistant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          message: `${userRequest}
+
+Debtor name: ${debtor.debtorName}
+Outstanding balance: ${formatCurrency(remaining, currency)}
+Total debt: ${formatCurrency(totalDebt, currency)}
+Amount already paid: ${formatCurrency(amountPaid, currency)}
+Preferred channel: ${reminderChannel}
+Notes: ${debtor.notes || "None"}
+
+Return only the final reminder message body in plain text. No markdown. No explanation.`,
+          context: {
+            expenseSummary: {
+              totalExpense: 0,
+              expenseCount: 0,
+              categoryTotals: {},
+            },
+            debtorSummary: {
+              debtorCount: 1,
+              totalDebt,
+              totalCollected: amountPaid,
+              pendingCount: debtor.status === "pending" ? 1 : 0,
+              remainingBalance: remaining,
+            },
+            preferredCurrency: currency,
+          },
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to generate reminder.");
+      }
+
+      const generatedMessage = typeof data?.text === "string" ? data.text.trim() : "";
+      setReminderMessage(generatedMessage || defaultReminderMessage);
+    } catch (error: any) {
+      console.error("Reminder generation error:", error);
+      setReminderError(error?.message || "Failed to generate reminder.");
+      if (!reminderMessage.trim()) {
+        setReminderMessage(defaultReminderMessage);
+      }
+    } finally {
+      setGeneratingReminder(false);
+    }
   };
 
   const sendNow = () => {
@@ -241,8 +366,8 @@ export default function DebtorDetail() {
       <div className="rounded-2xl border p-6 shadow-sm space-y-5" style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-5xl md:text-6xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>{debtor.debtorName}</h1>
-          <span className={`px-4 py-1 rounded-2xl text-2xl font-semibold border ${debtor.status === "paid" ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
-            {debtor.status === "paid" ? "Paid" : "Pending"}
+          <span className={`px-4 py-1 rounded-2xl text-2xl font-semibold border ${statusMeta.badgeClass}`}>
+            {statusMeta.label}
           </span>
         </div>
         <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-3 gap-4" style={{ borderColor: "var(--border)" }}>
@@ -337,6 +462,38 @@ export default function DebtorDetail() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px]">
               <div className="p-4 border-r space-y-3" style={{ borderColor: "var(--border)" }}>
+                <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: "var(--border)", background: "var(--bg-elevated)" }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>AI Draft Assistant</p>
+                      <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                        Add instructions for tone or content. Leave it empty and AI will draft the reminder for you.
+                      </p>
+                    </div>
+                    <button
+                      onClick={generateReminderWithAI}
+                      disabled={generatingReminder || !currentUser}
+                      className="px-4 py-2 rounded-xl text-sm font-medium inline-flex items-center gap-2 disabled:opacity-60"
+                      style={{ background: "#2563eb", color: "#fff" }}
+                    >
+                      {generatingReminder ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                      {generatingReminder ? "Generating..." : "Generate with AI"}
+                    </button>
+                  </div>
+                  <textarea
+                    value={reminderPrompt}
+                    onChange={(e) => setReminderPrompt(e.target.value)}
+                    rows={3}
+                    placeholder="Example: Make it polite but firm, mention payment within 3 days, and keep it short."
+                    className="w-full px-4 py-3 rounded-xl border outline-none resize-none"
+                    style={{ color: "var(--text-primary)", background: "var(--bg-surface)", borderColor: "var(--border)" }}
+                  />
+                  {reminderError && (
+                    <div className="text-xs rounded-lg px-3 py-2" style={{ color: "#ef4444", background: "rgba(239,68,68,0.08)" }}>
+                      {reminderError}
+                    </div>
+                  )}
+                </div>
                 <textarea value={reminderMessage} onChange={(e) => setReminderMessage(e.target.value)} rows={12} className="w-full px-4 py-3 rounded-xl border outline-none resize-none" style={{ color: "var(--text-primary)", background: "var(--bg-elevated)", borderColor: "var(--border)" }} />
                 <div className="flex justify-end gap-2">
                   <button onClick={sendNow} className="px-5 py-2.5 rounded-xl text-white font-medium" style={{ background: "#3b82f6" }}>Send Now</button>

@@ -1,12 +1,57 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { differenceInCalendarDays, startOfDay } from "date-fns";
 import { useData } from "../context/DataContext";
 import { useApp } from "../context/AppContext";
 import { Ellipsis, FileDown, Mail, PencilLine, Phone, Plus, ReceiptText, Save, Trash2, X } from "lucide-react";
 import { formatCurrency } from "../utils/format";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
+function getDebtorStatusMeta(debtor: {
+  status: "pending" | "paid";
+  date: string;
+  amount: number;
+  paidAmount: number;
+}) {
+  if (debtor.status === "paid" || Math.max(0, Number(debtor.amount || 0) - Number(debtor.paidAmount || 0)) <= 0) {
+    return {
+      label: "Paid",
+      badgeClass: "bg-emerald-600 border-emerald-700",
+    };
+  }
+
+  const dueDate = new Date(`${debtor.date}T00:00:00`);
+  if (Number.isNaN(dueDate.getTime())) {
+    return {
+      label: "Pending",
+      badgeClass: "bg-amber-500 border-amber-600",
+    };
+  }
+
+  const dayDiff = differenceInCalendarDays(startOfDay(new Date()), startOfDay(dueDate));
+
+  if (dayDiff > 0) {
+    return {
+      label: `Overdue by ${dayDiff} day${dayDiff === 1 ? "" : "s"}`,
+      badgeClass: "bg-red-600 border-red-700",
+    };
+  }
+
+  if (dayDiff === 0) {
+    return {
+      label: "Due today",
+      badgeClass: "bg-orange-500 border-orange-600",
+    };
+  }
+
+  const daysRemaining = Math.abs(dayDiff);
+  return {
+    label: `Due in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}`,
+    badgeClass: "bg-amber-500 border-amber-600",
+  };
+}
 
 export default function Debtors() {
   const { debtors, expenses, payments, addDebtor, updateDebtor, deleteDebtor, loading } = useData();
@@ -156,11 +201,6 @@ export default function Debtors() {
     setOpenCardMenuId(null);
   };
 
-  const statusColor = (status: "pending" | "paid") =>
-    status === "paid"
-      ? "bg-emerald-600 border-emerald-700"
-      : "bg-amber-400 border-amber-500";
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -205,6 +245,12 @@ export default function Debtors() {
             const percentPaid = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
             const linkedExpense = expenses.find((expense) => expense.id === debtor.expenseId);
             const category = linkedExpense?.category || debtor.notes || "General";
+            const statusMeta = getDebtorStatusMeta({
+              status: debtor.status,
+              date: debtor.date,
+              amount: total,
+              paidAmount: paid,
+            });
 
             return (
               <div
@@ -213,9 +259,9 @@ export default function Debtors() {
                 style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}
                 onClick={() => navigate(`/debtors/${debtor.id}`)}
               >
-                <div className={`px-4 py-2 border-b ${statusColor(debtor.status)}`}>
+                <div className={`px-4 py-2 border-b ${statusMeta.badgeClass}`}>
                   <span className="inline-flex items-center px-3 py-0.5 rounded-full border text-xs font-semibold uppercase tracking-wide text-white border-white/50">
-                    {debtor.status}
+                    {statusMeta.label}
                   </span>
                 </div>
 

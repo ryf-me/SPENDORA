@@ -204,10 +204,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Force refresh local user object
     try {
       await user.reload();
-      setCurrentUser({ ...auth.currentUser });
+      setCurrentUser(auth.currentUser);
     } catch (reloadErr) {
       console.warn("Reload failed, but changes were saved.", reloadErr);
-      setCurrentUser({ ...auth.currentUser });
+      setCurrentUser(auth.currentUser);
     }
   };
 
