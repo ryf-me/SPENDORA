@@ -424,7 +424,7 @@ export default function Dashboard() {
         <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-4xl font-black tracking-tight md:text-5xl" style={{ color: "var(--text-primary)" }}>
-              System Health
+              Dashboard
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6" style={{ color: "var(--text-muted)" }}>
               Your sovereign financial narrative. Real-time monitoring of ledger positions, debt liquidity, and
