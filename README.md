@@ -4,7 +4,7 @@ Spendora is a Vite + React expense tracker with Firebase auth/data, debtor track
 
 ## Current Release
 
-- App version: `v0.4.3`
+- App version: `v0.5.0`
 - Release notes: [RELEASE.md](./RELEASE.md)
 
 ## Stack
@@ -19,8 +19,12 @@ Spendora is a Vite + React expense tracker with Firebase auth/data, debtor track
 
 - Expense tracking with categories, history, and reporting
 - Debtor tracking with partial and full payment flows
-- Authenticated AI assistant for spending and debt summaries
-- Profile settings and avatar uploads
+- Reporting dashboard with selectable date-range windows
+- Calendar date drill-down with a details modal
+- Authenticated AI assistant with live snapshot actions, assistant-scope prompts, and Tamil replies
+- AI-generated debtor reminder drafts with optional user guidance
+- Profile settings with curated DiceBear avatar libraries
+- Recurring expenses and in-app notification support
 - Firebase-backed real-time data sync
 - Security headers configured in `vercel.json`
 
@@ -113,6 +117,7 @@ If you skip the Firebase rules deploy, your Vercel app may work while Firestore 
 - Avatar uploads are restricted by Firebase Storage rules and client-side file checks.
 - Security headers are configured in `vercel.json`.
 - The current AI rate limiter is in-memory, so it is best-effort on Vercel rather than globally shared.
+- `npm audit` is clean at the time of `v0.5.0`.
 
 ## Project Structure
 
@@ -140,5 +145,5 @@ spendora/
 
 ## Support
 
-- Repository: `https://github.com/ryf-me/SPENDORA_expense_tracker`
+- Repository: `https://github.com/ryf-me/SPENDORA`
 - Contact: `insathraif004@gmail.com`
