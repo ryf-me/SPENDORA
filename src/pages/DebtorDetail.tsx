@@ -5,6 +5,7 @@ import { differenceInCalendarDays, startOfDay } from "date-fns";
 import { useData } from "../context/DataContext";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
+import { requestAiAssistant } from "../utils/ai";
 import {
   Banknote,
   Calendar,
@@ -105,7 +106,7 @@ export default function DebtorDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { debtors, payments, recordDebtorPayment, deleteDebtor, updateDebtor } = useData();
-  const { currentUser } = useAuth();
+  const { currentUser, getAccessToken } = useAuth();
   const { currency } = useApp();
 
   const debtor = debtors.find((d) => d.id === id);
@@ -257,15 +258,14 @@ export default function DebtorDetail() {
       : "Write a payment reminder message for this debtor. Keep it professional, concise, and ready to send.";
 
     try {
-      const idToken = await currentUser.getIdToken();
-      const response = await fetch("/api/ai-assistant", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          message: `${userRequest}
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error("You must be logged in to generate reminders.");
+      }
+
+      const generatedMessage = await requestAiAssistant({
+        accessToken,
+        message: `${userRequest}
 
 Debtor name: ${debtor.debtorName}
 Outstanding balance: ${formatCurrency(remaining, currency)}
@@ -275,30 +275,22 @@ Preferred channel: ${reminderChannel}
 Notes: ${debtor.notes || "None"}
 
 Return only the final reminder message body in plain text. No markdown. No explanation.`,
-          context: {
-            expenseSummary: {
-              totalExpense: 0,
-              expenseCount: 0,
-              categoryTotals: {},
-            },
-            debtorSummary: {
-              debtorCount: 1,
-              totalDebt,
-              totalCollected: amountPaid,
-              pendingCount: debtor.status === "pending" ? 1 : 0,
-              remainingBalance: remaining,
-            },
-            preferredCurrency: currency,
+        context: {
+          expenseSummary: {
+            totalExpense: 0,
+            expenseCount: 0,
+            categoryTotals: {},
           },
-        }),
+          debtorSummary: {
+            debtorCount: 1,
+            totalDebt,
+            totalCollected: amountPaid,
+            pendingCount: debtor.status === "pending" ? 1 : 0,
+            remainingBalance: remaining,
+          },
+          preferredCurrency: currency,
+        },
       });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to generate reminder.");
-      }
-
-      const generatedMessage = typeof data?.text === "string" ? data.text.trim() : "";
       setReminderMessage(generatedMessage || defaultReminderMessage);
     } catch (error: any) {
       console.error("Reminder generation error:", error);

@@ -4,6 +4,7 @@ import { useData } from "../context/DataContext";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
 import { formatCurrency } from "../utils/format";
+import { requestAiAssistant } from "../utils/ai";
 
 type ChatMessage = { role: "user" | "model"; text: string };
 type SnapshotItem = { label: string; value: string; helper: string; tone: string; prompt: string };
@@ -169,7 +170,7 @@ function renderModelMessage(text: string) {
 
 export default function AIAssistant() {
   const { expenses, debtors } = useData();
-  const { currentUser } = useAuth();
+  const { currentUser, getAccessToken } = useAuth();
   const { currency: preferredCurrency, theme } = useApp();
   const isDark = theme === "dark";
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -325,33 +326,20 @@ export default function AIAssistant() {
       }
 
       const safeContext = buildSafeContext();
-      const idToken = await currentUser.getIdToken();
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error("You must be logged in to use the AI assistant.");
+      }
 
-      const response = await fetch("/api/ai-assistant", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          message: `${languageInstruction}\n\nUser request: ${userMessage}`,
-          context: safeContext,
-        }),
+      const responseText = await requestAiAssistant({
+        accessToken,
+        message: `${languageInstruction}\n\nUser request: ${userMessage}`,
+        context: safeContext,
       });
-
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("The AI backend is not available or returned an invalid response.");
-      }
-
-      const responseData = await response.json();
-      if (!response.ok) {
-        throw new Error(responseData?.error || "Failed to connect to AI service.");
-      }
 
       setMessages((prev) => [
         ...prev,
-        { role: "model", text: responseData?.text || "I could not generate a response." },
+        { role: "model", text: responseText || "I could not generate a response." },
       ]);
     } catch (error: any) {
       console.error("AI Error:", error);

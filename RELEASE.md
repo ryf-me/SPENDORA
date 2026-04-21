@@ -1,5 +1,35 @@
 # Spendora Release Notes
 
+## v0.7.0
+
+Release focus: full runtime migration from Firebase to Supabase, including auth, data, storage, backend functions, and deployment tooling.
+
+### Included changes
+
+- Replaced the Firebase client setup with a shared Supabase client and removed Firebase runtime dependencies from the app.
+- Rebuilt auth flows around Supabase Auth while preserving the app-facing auth API for email sign-in, registration, password reset, Google sign-in, session restore, and profile updates.
+- Reworked the main data layer to use Supabase tables and Realtime subscriptions for categories, expenses, debtors, payments, and feedback.
+- Moved the AI assistant backend from the Cloudflare Worker path to a Supabase Edge Function that validates Supabase JWTs and keeps OpenRouter server-side.
+- Added a repo-managed `supabase/` backend with SQL migrations, row-level security policies, storage bucket configuration, helper RPCs, and function deployment config.
+- Added Firebase-to-Supabase migration utilities for auth mapping, table imports, storage imports, and verification so teams can migrate exported data when backups exist.
+- Simplified the Cloudflare Worker to static hosting and security headers only, with Supabase now handling backend responsibilities.
+- Replaced Firebase env/config/rules files and updated docs, env examples, CSP rules, and test helpers for the Supabase deployment model.
+
+### Release checklist
+
+- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the frontend deployment.
+- Apply the SQL migration in `supabase/migrations/20260421_initial_supabase_cutover.sql` to the hosted Supabase project.
+- Set `OPENROUTER_API_KEY` as a Supabase Edge Function secret and deploy `supabase/functions/ai-assistant`.
+- Configure Supabase Auth site URL, redirect URLs, and the Google provider before enabling Google sign-in in production.
+- If migrating historical Firebase data, run the scripts in `scripts/supabase/` and verify counts/totals before cutover.
+
+### Notes
+
+- This release changes Spendora from a Firebase-backed app to a Supabase-backed app.
+- Cloudflare remains the static host only; app backend responsibilities now live in Supabase.
+- The GitHub release for this version should be published from tag `v0.7.0`.
+- The canonical GitHub repository location is `https://github.com/ryf-me/SPENDORA`.
+
 ## v0.6.0
 
 Release focus: Cloudflare Workers migration, unified API hosting, and deployment/docs alignment.

@@ -1,19 +1,14 @@
 # Spendora
 
-Spendora is a Vite + React expense tracker with Firebase auth/data, debtor tracking, reports, and an authenticated AI assistant backed by OpenRouter. The app now deploys as a single Cloudflare Workers project that serves the SPA and the `/api/ai-assistant` endpoint together.
-
-## Current Release
-
-- App version: `v0.6.0`
-- Release notes: [RELEASE.md](./RELEASE.md)
+Spendora is a Vite + React expense tracker with Supabase auth/data/storage, debtor tracking, reports, and an authenticated AI assistant backed by OpenRouter. The app is hosted as a Cloudflare Workers static deployment, while backend ownership now lives in Supabase Auth, Postgres, Storage, Realtime, and Edge Functions.
 
 ## Stack
 
 - Frontend: React 19, TypeScript, Vite
 - Styling: Tailwind CSS v4
-- Backend services: Firebase Auth, Firestore, Firebase Storage
-- AI: OpenRouter via `worker/index.ts`
-- Deployment: Cloudflare Workers with static assets
+- Backend services: Supabase Auth, Postgres, Storage, Realtime, Edge Functions
+- AI: OpenRouter via `supabase/functions/ai-assistant`
+- Hosting: Cloudflare Workers static assets
 
 ## Features
 
@@ -25,18 +20,17 @@ Spendora is a Vite + React expense tracker with Firebase auth/data, debtor track
 - AI-generated debtor reminder drafts with optional user guidance
 - Profile settings with curated DiceBear avatar libraries
 - Recurring expenses and in-app notification support
-- Firebase-backed real-time data sync
-- Security headers configured for both static assets and Worker API responses
+- Supabase-backed real-time data sync
 
 ## Local Development
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - npm
-- A Firebase project
+- A Supabase project
 - An OpenRouter API key
-- A Cloudflare account for deployment
+- A Cloudflare account for the static host
 
 ### Install
 
@@ -49,30 +43,9 @@ npm install
 Create `.env.local` from `.env.example` and set:
 
 ```env
-VITE_FIREBASE_API_KEY=your_firebase_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
-
-### Worker secrets for local development
-
-Create `.dev.vars` from `.dev.vars.example` and set:
-
-```env
-OPENROUTER_API_KEY=your_openrouter_api_key
-FIREBASE_API_KEY=your_firebase_web_api_key
-APP_URL=http://localhost:3000
-```
-
-Notes:
-
-- `FIREBASE_API_KEY` is the server-side secret used by the Worker when it verifies Firebase ID tokens. For most Firebase web apps, this matches the Firebase Web API key you also expose as `VITE_FIREBASE_API_KEY`.
-- `APP_URL` is required by the Wrangler config and is used as the app's canonical URL when calling OpenRouter.
-- Do not commit `.dev.vars` or `.env.local`.
 
 ### Start the app
 
@@ -82,63 +55,82 @@ npm run dev
 
 The app runs on `http://localhost:3000`.
 
-## Build and Preview
+## Supabase Setup
+
+### Database and storage
+
+Apply the SQL migration in `supabase/migrations/20260421_initial_supabase_cutover.sql` to create:
+
+- `profiles`
+- `categories`
+- `expenses`
+- `debtors`
+- `payments`
+- `feedback`
+- RLS policies
+- the `avatars` storage bucket
+- helper RPCs used by the frontend
+
+### AI Edge Function
+
+Set the function secret in Supabase:
 
 ```bash
-npm run lint
-npm run build
-npm run preview
+supabase secrets set OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
-`vite preview` runs with the Cloudflare Vite plugin, so the Worker API is available while previewing the production build locally.
-
-## Deployment
-
-### Cloudflare Workers
-
-Set the frontend `VITE_FIREBASE_*` variables in your build environment, then configure the Worker secrets:
+Deploy the function:
 
 ```bash
-wrangler secret put OPENROUTER_API_KEY
-wrangler secret put FIREBASE_API_KEY
-wrangler secret put APP_URL
+supabase functions deploy ai-assistant
 ```
 
-Deploy with:
+The frontend calls `https://<project-ref>.supabase.co/functions/v1/ai-assistant` with the user access token.
+
+## Cloudflare Deployment
+
+The Cloudflare Worker now serves static assets and security headers only.
+
+Build and deploy with:
 
 ```bash
 npm run deploy
 ```
 
-The project is configured in `wrangler.jsonc` with:
+Make sure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are available in the build environment before running the deploy.
 
-- `assets.not_found_handling = "single-page-application"` for SPA route refreshes
-- `assets.run_worker_first = ["/api/*"]` so `/api/ai-assistant` reaches the Worker before asset handling
-- required secret validation for `OPENROUTER_API_KEY`, `FIREBASE_API_KEY`, and `APP_URL`
+## Migration Utilities
 
-### Firebase rules
+Repo-local migration scripts live under `scripts/supabase/`:
 
-This repo includes:
+- `npm run migrate:auth`
+- `npm run migrate:data`
+- `npm run migrate:storage`
+- `npm run migrate:verify`
 
-- `firestore.rules`
-- `storage.rules`
+Expected environment variables for the migration utilities:
 
-Deploy them separately from the Cloudflare app:
-
-```bash
-firebase deploy --only firestore:rules
-firebase deploy --only storage
+```env
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_DB_URL=postgres://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
+FIREBASE_AUTH_EXPORT_PATH=exports/firebase-auth-users.json
+FIREBASE_EXPORT_DIR=exports/firestore
+FIREBASE_STORAGE_EXPORT_DIR=exports/storage
+AUTH_MAPPING_OUTPUT_PATH=storage/supabase-auth-map.json
 ```
 
-If you skip the Firebase rules deploy, your app may work while Firestore or Storage stays misconfigured.
+Notes:
+
+- The auth import script builds a Firebase UID to Supabase user mapping and flags imported users for password reset unless you plug in a custom password import flow.
+- Run the migration scripts against staging first, then repeat during a short production write freeze before cutover.
 
 ## Security Notes
 
-- The AI endpoint validates request size and sanitizes client-provided summary context.
-- Avatar uploads are restricted by Firebase Storage rules and client-side file checks.
-- Security headers for static assets are defined in `public/_headers`.
-- Security headers for Worker-generated API responses are applied directly in `worker/index.ts`.
-- The current AI rate limiter is in-memory, so it remains best-effort rather than globally shared.
+- The AI function validates Supabase auth before calling OpenRouter.
+- Row Level Security restricts each user to their own data.
+- Avatar uploads are limited by client-side checks and Supabase Storage policies.
+- Security headers for static assets are defined in `public/_headers` and mirrored in `worker/index.ts`.
 
 ## Project Structure
 
@@ -146,15 +138,18 @@ If you skip the Firebase rules deploy, your app may work while Firestore or Stor
 spendora/
 |-- public/
 |   `-- _headers
+|-- scripts/
+|   `-- supabase/
 |-- src/
 |   |-- components/
 |   |-- context/
 |   |-- pages/
-|   `-- firebase.ts
+|   `-- supabase.ts
+|-- supabase/
+|   |-- functions/
+|   `-- migrations/
 |-- worker/
 |   `-- index.ts
-|-- firestore.rules
-|-- storage.rules
 |-- vite.config.ts
 `-- wrangler.jsonc
 ```
@@ -165,7 +160,11 @@ spendora/
 - `npm run lint` - run TypeScript checks
 - `npm run build` - create the production build
 - `npm run preview` - preview the built app with the Worker runtime
-- `npm run deploy` - build and deploy to Cloudflare Workers
+- `npm run deploy` - build and deploy the static Cloudflare Worker
+- `npm run migrate:auth` - import exported Firebase auth users into Supabase
+- `npm run migrate:data` - import exported Firestore collections into Supabase
+- `npm run migrate:storage` - upload exported avatar files into Supabase Storage
+- `npm run migrate:verify` - compare exported Firebase data against Supabase totals and counts
 
 ## Support
 

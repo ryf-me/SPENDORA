@@ -15,15 +15,24 @@ export default function Login() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { login, register, resetPassword, loginWithGoogle, currentUser, loading: authLoading } = useAuth();
+  const {
+    login,
+    register,
+    resetPassword,
+    updatePassword,
+    loginWithGoogle,
+    currentUser,
+    loading: authLoading,
+    isPasswordRecovery,
+  } = useAuth();
   const { theme } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!authLoading && currentUser) {
+    if (!authLoading && currentUser && !isPasswordRecovery) {
       navigate("/", { replace: true });
     }
-  }, [authLoading, currentUser, navigate]);
+  }, [authLoading, currentUser, isPasswordRecovery, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +41,12 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isForgotPassword) {
+      if (isPasswordRecovery) {
+        if (password !== confirmPassword) throw new Error("Passwords do not match");
+        if (password.length < 6) throw new Error("Password must be at least 6 characters");
+        await updatePassword(password);
+        setMessage("Password updated successfully. Redirecting to your dashboard...");
+      } else if (isForgotPassword) {
         await resetPassword(email);
         setMessage("Check your inbox for a password reset email");
       } else if (isLogin) {
@@ -82,6 +96,8 @@ export default function Login() {
         >
           {isForgotPassword
             ? "Reset your password"
+            : isPasswordRecovery
+              ? "Set a new password"
             : isLogin
               ? "Sign in to your account"
               : "Create a new account"}
@@ -108,7 +124,7 @@ export default function Login() {
               </div>
             )}
 
-            {!isLogin && !isForgotPassword && (
+            {!isLogin && !isForgotPassword && !isPasswordRecovery && (
               <div className="animate-in fade-in slide-in-from-top-2">
                 <label
                   className="block text-sm font-medium"
@@ -137,7 +153,8 @@ export default function Login() {
               </div>
             )}
 
-            <div>
+            {!isPasswordRecovery && (
+              <div>
               <label
                 className="block text-sm font-medium"
                 style={{ color: "var(--text-secondary)" }}
@@ -162,15 +179,16 @@ export default function Login() {
                   placeholder="you@example.com"
                 />
               </div>
-            </div>
+              </div>
+            )}
 
-            {!isForgotPassword && (
+            {(!isForgotPassword || isPasswordRecovery) && (
               <div>
                 <label
                   className="block text-sm font-medium"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  Password
+                  {isPasswordRecovery ? "New Password" : "Password"}
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -193,7 +211,7 @@ export default function Login() {
               </div>
             )}
 
-            {!isLogin && !isForgotPassword && (
+            {(!isLogin && !isForgotPassword) || isPasswordRecovery ? (
               <div className="animate-in fade-in slide-in-from-top-2">
                 <label
                   className="block text-sm font-medium"
@@ -226,9 +244,9 @@ export default function Login() {
                   <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
                 )}
               </div>
-            )}
+            ) : null}
 
-            {isLogin && !isForgotPassword && (
+            {isLogin && !isForgotPassword && !isPasswordRecovery && (
               <div className="flex items-center justify-end">
                 <button
                   type="button"
@@ -250,6 +268,8 @@ export default function Login() {
               >
                 {loading
                   ? "Processing..."
+                  : isPasswordRecovery
+                    ? "Update password"
                   : isForgotPassword
                     ? "Send reset link"
                     : isLogin
@@ -259,10 +279,13 @@ export default function Login() {
             </div>
           </form>
 
-          {isForgotPassword ? (
+          {isForgotPassword || isPasswordRecovery ? (
             <div className="mt-6 text-center">
               <button
-                onClick={() => setIsForgotPassword(false)}
+                onClick={() => {
+                  setIsForgotPassword(false);
+                  navigate("/login", { replace: true });
+                }}
                 className="flex items-center justify-center space-x-2 text-sm transition-colors mx-auto"
                 style={{ color: "var(--text-muted)" }}
               >
