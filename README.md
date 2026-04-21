@@ -169,5 +169,5 @@ spendora/
 
 ## Support
 
-- Repository: `https://github.com/ryf-me/SPENDORA_expense_tracker`
+- Repository: `https://github.com/ryf-me/SPENDORA`
 - Contact: `insathraif004@gmail.com`

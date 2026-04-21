@@ -25,7 +25,7 @@ Release focus: Cloudflare Workers migration, unified API hosting, and deployment
 
 - This release changes the deployment target from Vercel to Cloudflare Workers.
 - The GitHub release for this version should be published from tag `v0.6.0`.
-- The canonical GitHub repository location is `https://github.com/ryf-me/SPENDORA_expense_tracker`.
+- The canonical GitHub repository location is `https://github.com/ryf-me/SPENDORA`.
 
 ## v0.5.0
 
