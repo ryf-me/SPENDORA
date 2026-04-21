@@ -25,6 +25,8 @@ VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
+Do not add provider API keys such as Gemini or OpenRouter to `.env.local` or any `VITE_*` variable. `VITE_*` values are exposed to the browser bundle.
+
 Start the app:
 
 ```bash
@@ -51,6 +53,8 @@ Set the Edge Function secret:
 supabase secrets set OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
+If you keep local server-side secrets for automation, store them outside browser-scoped env files and rotate them immediately if they were ever written to disk in plaintext.
+
 Deploy the function:
 
 ```bash
@@ -71,6 +75,8 @@ Set only these frontend environment variables in Pages:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
+Do not set AI provider keys or service-role keys as frontend environment variables.
+
 After changing environment variables, trigger a clean Pages rebuild so the latest asset bundle is served.
 
 ## Security Notes
@@ -79,6 +85,7 @@ After changing environment variables, trigger a clean Pages rebuild so the lates
 - Row Level Security restricts each user to their own data.
 - Avatar uploads are limited by client-side checks and Supabase Storage policies.
 - Static security headers are defined in `public/_headers`.
+- Local development defaults to `127.0.0.1`; use `npm run dev:host` or `npm run preview:host` only when LAN access is intentionally required.
 
 ## Useful Commands
 

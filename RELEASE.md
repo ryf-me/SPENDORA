@@ -1,5 +1,31 @@
 # Spendora Release Notes
 
+## v0.7.4
+
+Release focus: security hardening for local env handling, frontend runtime exposure, and the Vite build toolchain.
+
+### Included changes
+
+- Removed the browser-scoped Gemini environment variable pattern from the repo guidance and reinforced that provider secrets must stay out of `VITE_*` variables.
+- Hardened local development defaults so `npm run dev` and `npm run preview` bind to `127.0.0.1`, while preserving explicit `:host` scripts for intentional LAN access.
+- Upgraded the Vite toolchain to the current patched line and moved Vite-specific build plugins into `devDependencies` so runtime dependencies stay leaner.
+- Added a `dompurify` override to resolve the audited optional jsPDF dependency to a patched version without changing the existing PDF export feature set.
+- Tightened the static Content Security Policy by removing no-longer-needed Google endpoints and explicitly disallowing object embeds.
+
+### Release checklist
+
+- Rotate any previously exposed `SUPABASE_SERVICE_ROLE_KEY` and `OPENROUTER_API_KEY` values before restoring them to local or hosted secret stores.
+- Keep frontend deployment variables limited to `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+- Redeploy the frontend so the latest CSP and rebuilt dependency graph are reflected in the production bundle.
+- Re-run `npm audit --omit=dev` and confirm the production dependency report remains clean.
+- Publish the GitHub release for this version from tag `v0.7.4` and mark it as the latest release.
+
+### Notes
+
+- Verified locally with `npm run lint`, `npm run build`, and a clean `npm audit --omit=dev` result after dependency refresh.
+- The root `.env` was intentionally left with empty placeholders for rotated server-side secrets rather than reusing previously exposed values.
+- The canonical GitHub repository location is `https://github.com/ryf-me/SPENDORA`.
+
 ## v0.7.3
 
 Release focus: polished app shell controls, refreshed auth/notification UI, and a fixed AI assistant auth path.
