@@ -7,10 +7,13 @@ interface AppContextType {
     theme: Theme;
     currency: Currency;
     timezone: string;
+    desktopSidebarHidden: boolean;
     toggleTheme: () => void;
+    toggleDesktopSidebar: () => void;
     setTheme: (theme: Theme) => void;
     setCurrency: (currency: Currency) => void;
     setTimezone: (timezone: string) => void;
+    setDesktopSidebarHidden: (hidden: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -31,6 +34,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return saved || "IST";
     });
 
+    const [desktopSidebarHidden, setDesktopSidebarHiddenState] = useState<boolean>(() => {
+        const saved = localStorage.getItem("spendora-desktop-sidebar-hidden");
+        return saved === "true";
+    });
+
     useEffect(() => {
         const root = document.documentElement;
         root.classList.remove("dark", "light");
@@ -46,22 +54,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("spendora-timezone", timezone);
     }, [timezone]);
 
+    useEffect(() => {
+        localStorage.setItem("spendora-desktop-sidebar-hidden", String(desktopSidebarHidden));
+    }, [desktopSidebarHidden]);
+
     const toggleTheme = () =>
         setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
+    const toggleDesktopSidebar = () =>
+        setDesktopSidebarHiddenState((prev) => !prev);
 
     const setTheme = (t: Theme) => setThemeState(t);
     const setCurrency = (c: Currency) => setCurrencyState(c);
     const setTimezone = (tz: string) => setTimezoneState(tz);
+    const setDesktopSidebarHidden = (hidden: boolean) => setDesktopSidebarHiddenState(hidden);
 
     return (
         <AppContext.Provider value={{
             theme,
             currency,
             timezone,
+            desktopSidebarHidden,
             toggleTheme,
+            toggleDesktopSidebar,
             setTheme,
             setCurrency,
-            setTimezone
+            setTimezone,
+            setDesktopSidebarHidden
         }}>
             {children}
         </AppContext.Provider>

@@ -5,47 +5,6 @@ import { useApp } from "../context/AppContext";
 import { useData } from "../context/DataContext";
 import { User, Mail, Globe, Tag, Trash2, Plus, Bell, Clock, Info, Grid3x3, ImagePlus, RotateCcw } from "lucide-react";
 
-const avatarUrl = (style: string, seed: string) =>
-  `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&size=128&backgroundColor=transparent`;
-
-const PREDEFINED_AVATARS = [
-  { name: "Lorelei Aaliyah", url: avatarUrl("lorelei", "Aaliyah") },
-  { name: "Lorelei Mateo", url: avatarUrl("lorelei", "Mateo") },
-  { name: "Lorelei Priya", url: avatarUrl("lorelei", "Priya") },
-  { name: "Lorelei Zara", url: avatarUrl("lorelei", "Zara") },
-  { name: "Lorelei Yara", url: avatarUrl("lorelei", "Yara") },
-  { name: "Lorelei Omar", url: avatarUrl("lorelei", "Omar") },
-  { name: "Lorelei Layla", url: avatarUrl("lorelei", "Layla") },
-  { name: "Lorelei Karim", url: avatarUrl("lorelei", "Karim") },
-
-  { name: "Lorelei Neutral Noor", url: avatarUrl("lorelei-neutral", "Noor") },
-  { name: "Lorelei Neutral Sam", url: avatarUrl("lorelei-neutral", "Sam") },
-  { name: "Lorelei Neutral Alex", url: avatarUrl("lorelei-neutral", "Alex") },
-  { name: "Lorelei Neutral Dani", url: avatarUrl("lorelei-neutral", "Dani") },
-  { name: "Lorelei Neutral Jules", url: avatarUrl("lorelei-neutral", "Jules") },
-  { name: "Lorelei Neutral Rayan", url: avatarUrl("lorelei-neutral", "Rayan") },
-  { name: "Lorelei Neutral Milan", url: avatarUrl("lorelei-neutral", "Milan") },
-  { name: "Lorelei Neutral Sky", url: avatarUrl("lorelei-neutral", "Sky") },
-
-  { name: "Notionists Amina", url: avatarUrl("notionists", "Amina") },
-  { name: "Notionists Ravi", url: avatarUrl("notionists", "Ravi") },
-  { name: "Notionists Leena", url: avatarUrl("notionists", "Leena") },
-  { name: "Notionists Tariq", url: avatarUrl("notionists", "Tariq") },
-  { name: "Notionists Inaya", url: avatarUrl("notionists", "Inaya") },
-  { name: "Notionists Jonah", url: avatarUrl("notionists", "Jonah") },
-  { name: "Notionists Maya", url: avatarUrl("notionists", "Maya") },
-  { name: "Notionists Kabir", url: avatarUrl("notionists", "Kabir") },
-
-  { name: "Notionists Neutral Ash", url: avatarUrl("notionists-neutral", "Ash") },
-  { name: "Notionists Neutral Sage", url: avatarUrl("notionists-neutral", "Sage") },
-  { name: "Notionists Neutral Avery", url: avatarUrl("notionists-neutral", "Avery") },
-  { name: "Notionists Neutral Remy", url: avatarUrl("notionists-neutral", "Remy") },
-  { name: "Notionists Neutral Taylor", url: avatarUrl("notionists-neutral", "Taylor") },
-  { name: "Notionists Neutral Jordan", url: avatarUrl("notionists-neutral", "Jordan") },
-  { name: "Notionists Neutral Noor", url: avatarUrl("notionists-neutral", "Noor") },
-  { name: "Notionists Neutral Kai", url: avatarUrl("notionists-neutral", "Kai") },
-];
-
 export default function Settings() {
   const { currentUser, profileData, updateUserProfile } = useAuth();
   const { theme, setTheme, currency, setCurrency, timezone, setTimezone } = useApp();
@@ -56,7 +15,6 @@ export default function Settings() {
   // Profile state
   const [name, setName] = useState(profileData?.name || currentUser?.displayName || "");
   const [bio, setBio] = useState(profileData?.bio || "");
-  const [selectedPresetAvatar, setSelectedPresetAvatar] = useState<string | null>(null);
   const [uploadedAvatarFile, setUploadedAvatarFile] = useState<File | null>(null);
   const [uploadedAvatarPreviewUrl, setUploadedAvatarPreviewUrl] = useState<string | null>(null);
   const [editorSourceUrl, setEditorSourceUrl] = useState<string | null>(null);
@@ -86,7 +44,8 @@ export default function Settings() {
   };
 
   const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${currentUser?.email}&background=random`;
-  const displayAvatar = uploadedAvatarPreviewUrl || selectedPresetAvatar || currentUser?.photoURL || fallbackAvatarUrl;
+  const currentSavedAvatar = profileData?.photoURL || currentUser?.photoURL || null;
+  const displayAvatar = uploadedAvatarPreviewUrl || currentSavedAvatar || fallbackAvatarUrl;
 
   const clearEditorSource = React.useCallback(() => {
     setEditorSourceUrl((currentUrl) => {
@@ -114,7 +73,6 @@ export default function Settings() {
 
   const resetPendingAvatarSelection = React.useCallback(() => {
     clearUploadedAvatar();
-    setSelectedPresetAvatar(null);
   }, [clearUploadedAvatar]);
 
   React.useEffect(() => {
@@ -134,7 +92,7 @@ export default function Settings() {
 
     return {
       avatarFile: undefined,
-      photoURL: selectedPresetAvatar || currentUser?.photoURL || undefined,
+      photoURL: currentSavedAvatar || undefined,
     };
   };
 
@@ -173,12 +131,6 @@ export default function Settings() {
     }
   }, [profileData, currentUser]);
 
-  const handleAvatarSelect = (url: string) => {
-    clearUploadedAvatar();
-    setSelectedPresetAvatar(url);
-    setSaveMessage({ type: "", text: "" });
-  };
-
   const handleLocalPhotoSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const nextFile = event.target.files?.[0];
     if (!nextFile) return;
@@ -206,7 +158,6 @@ export default function Settings() {
     clearUploadedAvatar();
     setUploadedAvatarFile(file);
     setUploadedAvatarPreviewUrl(previewUrl);
-    setSelectedPresetAvatar(null);
     clearEditorSource();
     setSaveMessage({ type: "", text: "" });
   };
@@ -331,7 +282,7 @@ export default function Settings() {
                     <div>
                       <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Select Your Vibe</h3>
                       <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        Upload your own photo or choose from the preset avatar library.
+                        Upload your own photo, crop it, and save it as your profile picture.
                       </p>
                     </div>
                     <div
@@ -364,7 +315,7 @@ export default function Settings() {
                             <ImagePlus size={16} />
                             Upload photo
                           </button>
-                          {(uploadedAvatarFile || selectedPresetAvatar) && (
+                          {uploadedAvatarFile && (
                             <button
                               type="button"
                               onClick={resetPendingAvatarSelection}
@@ -378,55 +329,14 @@ export default function Settings() {
                         </div>
                       </div>
 
-                      {(uploadedAvatarFile || selectedPresetAvatar) && (
+                      {uploadedAvatarFile && (
                         <div
                           className="rounded-xl border px-3 py-3 text-xs"
                           style={{ borderColor: "var(--border)", color: "var(--text-muted)", background: "var(--bg-surface)" }}
                         >
-                          {uploadedAvatarFile
-                            ? `New uploaded photo ready: ${uploadedAvatarFile.name}`
-                            : "Preset avatar selected and ready to save."}
+                          {`New uploaded photo ready: ${uploadedAvatarFile.name}`}
                         </div>
                       )}
-                    </div>
-                    <div
-                      className="rounded-2xl border p-4"
-                      style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
-                    >
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
-                          Avatar Library
-                        </p>
-                        <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                          {PREDEFINED_AVATARS.length} presets
-                        </p>
-                      </div>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
-                      {PREDEFINED_AVATARS.map((avatar) => (
-                        <button
-                          key={avatar.url}
-                          type="button"
-                          onClick={() => handleAvatarSelect(avatar.url)}
-                          title={avatar.name}
-                          className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-[1.04] active:scale-[0.98] shadow-md ${(selectedPresetAvatar === avatar.url || (!selectedPresetAvatar && !uploadedAvatarFile && currentUser?.photoURL === avatar.url))
-                            ? "border-[var(--accent)] scale-105 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                            : "border-[var(--border)] opacity-60 hover:opacity-100 hover:border-[var(--accent)]"
-                            }`}
-                          style={{ background: "linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-elevated) 100%)" }}
-                        >
-                          <img src={avatar.url} alt={avatar.name} className="w-full h-full object-contain p-2" />
-                          <span
-                            className="absolute inset-x-0 bottom-0 px-1.5 py-1 text-[10px] font-semibold truncate"
-                            style={{
-                              color: "#fff",
-                              background: "linear-gradient(180deg, transparent 0%, rgba(15,23,42,0.85) 100%)",
-                            }}
-                          >
-                            {avatar.name}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
                     </div>
                   </div>
                 </div>

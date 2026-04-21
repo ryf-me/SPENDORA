@@ -25,7 +25,7 @@ import {
 
 export default function Layout() {
   const { currentUser, logout } = useAuth();
-  const { theme, toggleTheme } = useApp();
+  const { theme, toggleTheme, desktopSidebarHidden, toggleDesktopSidebar } = useApp();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -50,6 +50,102 @@ export default function Layout() {
     { to: "/contact", icon: LifeBuoy, label: "Contact" },
     { to: "/feedback", icon: MessageCircle, label: "Feedback" },
   ];
+
+  const sidebarContent = (
+    <>
+      <div className="overflow-y-auto flex-1">
+        <div className="p-8 flex flex-col items-center">
+          <img
+            src={
+              currentUser?.photoURL ||
+              `https://ui-avatars.com/api/?name=${currentUser?.email}&background=random`
+            }
+            alt="Profile"
+            className="w-20 h-20 rounded-full object-cover mb-4 border-2"
+            style={{ borderColor: "var(--accent)" }}
+          />
+          <h2 className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+            {currentUser?.displayName ||
+              currentUser?.email?.split("@")[0] ||
+              "User"}
+          </h2>
+        </div>
+
+        <nav className="px-4 space-y-2 pb-4">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium ${isActive ? "active-nav-item" : "inactive-nav-item"
+                }`
+              }
+              style={({ isActive }) =>
+                isActive
+                  ? {
+                    background: "var(--bg-elevated)",
+                    color: "var(--accent)",
+                    border: "1px solid var(--border)",
+                  }
+                  : {
+                    color: "var(--text-muted)",
+                  }
+              }
+            >
+              <item.icon size={20} />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+
+      <div
+        className="p-4 border-t transition-colors duration-300"
+        style={{ borderColor: "var(--border)", background: "var(--bg-surface)" }}
+      >
+        <button
+          onClick={handleLogout}
+          className="flex items-center space-x-3 px-4 py-3 w-full rounded-xl transition-colors text-sm font-medium"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
+            (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = "transparent";
+            (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
+          }}
+        >
+          <LogOut size={20} />
+          <span>Log out</span>
+        </button>
+
+        <div className="mt-4 mb-2 hidden md:flex items-center justify-between px-2">
+          <div className="flex items-center">
+            <span className="font-bold text-lg tracking-wider" style={{ color: "var(--accent)" }}>
+              SPEND
+            </span>
+            <span className="font-bold text-lg tracking-wider" style={{ color: "var(--text-primary)" }}>
+              ORA
+            </span>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-xl transition-all duration-300"
+            style={{
+              background: "var(--bg-elevated)",
+              color: "var(--accent)",
+              border: "1px solid var(--border)",
+            }}
+            title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <div
@@ -88,109 +184,26 @@ export default function Layout() {
         </div>
       </div>
 
-      {/* Sidebar */}
+      <div
+        className={`hidden md:block relative transition-all duration-300 ease-in-out ${desktopSidebarHidden ? "w-0" : "w-64"}`}
+        aria-hidden={desktopSidebarHidden}
+      >
+        <aside
+          className={`absolute inset-y-0 left-0 z-20 w-64 flex flex-col justify-between border-r transform transition-all duration-300 ease-in-out ${desktopSidebarHidden ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100"}`}
+          style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}
+        >
+          {sidebarContent}
+        </aside>
+      </div>
+
       <aside
         className={`
-          fixed md:static inset-y-0 left-0 z-40 w-64 flex flex-col justify-between border-r transform transition-all duration-300 ease-in-out
-          ${mobileMenuOpen ? "translate-x-0 pt-16" : "-translate-x-full md:translate-x-0"}
+          fixed inset-y-0 left-0 z-40 w-64 flex flex-col justify-between border-r transform transition-all duration-300 ease-in-out md:hidden
+          ${mobileMenuOpen ? "translate-x-0 pt-16" : "-translate-x-full"}
         `}
         style={{ background: "var(--bg-surface)", borderColor: "var(--border)" }}
       >
-        <div className="overflow-y-auto flex-1">
-          {/* User Profile */}
-          <div className="p-8 flex flex-col items-center">
-            <img
-              src={
-                currentUser?.photoURL ||
-                `https://ui-avatars.com/api/?name=${currentUser?.email}&background=random`
-              }
-              alt="Profile"
-              className="w-20 h-20 rounded-full object-cover mb-4 border-2"
-              style={{ borderColor: "var(--accent)" }}
-            />
-            <h2 className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-              {currentUser?.displayName ||
-                currentUser?.email?.split("@")[0] ||
-                "User"}
-            </h2>
-          </div>
-
-          {/* Navigation */}
-          <nav className="px-4 space-y-2 pb-4">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium ${isActive ? "active-nav-item" : "inactive-nav-item"
-                  }`
-                }
-                style={({ isActive }) =>
-                  isActive
-                    ? {
-                      background: "var(--bg-elevated)",
-                      color: "var(--accent)",
-                      border: "1px solid var(--border)",
-                    }
-                    : {
-                      color: "var(--text-muted)",
-                    }
-                }
-              >
-                <item.icon size={20} />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-
-        {/* Bottom Section */}
-        <div
-          className="p-4 border-t transition-colors duration-300"
-          style={{ borderColor: "var(--border)", background: "var(--bg-surface)" }}
-        >
-          <button
-            onClick={handleLogout}
-            className="flex items-center space-x-3 px-4 py-3 w-full rounded-xl transition-colors text-sm font-medium"
-            style={{ color: "var(--text-muted)" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
-              (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "transparent";
-              (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-            }}
-          >
-            <LogOut size={20} />
-            <span>Log out</span>
-          </button>
-
-          {/* Theme Toggle + Logo */}
-          <div className="mt-4 mb-2 hidden md:flex items-center justify-between px-2">
-            <div className="flex items-center">
-              <span className="font-bold text-lg tracking-wider" style={{ color: "var(--accent)" }}>
-                SPEND
-              </span>
-              <span className="font-bold text-lg tracking-wider" style={{ color: "var(--text-primary)" }}>
-                ORA
-              </span>
-            </div>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl transition-all duration-300"
-              style={{
-                background: "var(--bg-elevated)",
-                color: "var(--accent)",
-                border: "1px solid var(--border)",
-              }}
-              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
-            >
-              {isDark ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-          </div>
-        </div>
+        {sidebarContent}
       </aside>
 
       {/* Overlay for mobile */}
@@ -206,7 +219,20 @@ export default function Layout() {
         className="flex-1 overflow-y-auto p-4 md:p-8 pt-20 md:pt-8 w-full transition-colors duration-300"
         style={{ background: "var(--bg-base)" }}
       >
-        <div className="mb-4 hidden justify-end md:flex">
+        <div className="mb-4 hidden items-center justify-between md:flex">
+          <button
+            onClick={toggleDesktopSidebar}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-all duration-300"
+            style={{
+              background: "var(--bg-surface)",
+              borderColor: "var(--border)",
+              color: "var(--text-primary)",
+            }}
+            title={desktopSidebarHidden ? "Show sidebar" : "Hide sidebar"}
+            aria-label={desktopSidebarHidden ? "Show sidebar" : "Hide sidebar"}
+          >
+            <Menu size={20} />
+          </button>
           <NotificationCenter />
         </div>
         <Outlet />
