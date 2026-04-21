@@ -1,5 +1,31 @@
 # Spendora Release Notes
 
+## v0.7.2
+
+Release focus: profile photo uploads with an in-app editor, while keeping the existing preset avatar library.
+
+### Included changes
+
+- Added a first-class personal photo upload flow in Settings alongside the preset avatar picker.
+- Added a custom canvas-based image editor with drag, zoom, circular preview, reset, and cancel actions.
+- Reused the existing Supabase avatar upload path by exporting the edited crop as an image file before save.
+- Kept preset avatar selection intact and allowed users to switch back before saving profile changes.
+- Ensured profile photo changes flow through the existing auth/profile refresh path so updated avatars propagate across the app.
+
+### Release checklist
+
+- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the frontend deployment.
+- Confirm the Supabase `avatars` bucket and storage policies are applied in the hosted project.
+- Ensure `OPENROUTER_API_KEY` remains configured for the `ai-assistant` Supabase Edge Function.
+- Verify Cloudflare Pages is building from the current `main` branch and serving the newest asset hash.
+- Publish the GitHub release for this version from tag `v0.7.2` and mark it as the latest release.
+
+### Notes
+
+- Users can now upload and crop a personal profile picture directly from the Settings profile tab.
+- The preset avatar library remains available as an alternative to personal photo uploads.
+- The canonical GitHub repository location is `https://github.com/ryf-me/SPENDORA`.
+
 ## v0.7.1
 
 Release focus: Supabase backend adoption, Pages-first hosting, and runtime cleanup.

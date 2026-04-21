@@ -1,8 +1,9 @@
 ﻿import React, { useState } from "react";
+import ProfileImageEditor from "../components/ProfileImageEditor";
 import { useAuth } from "../context/AuthContext";
 import { useApp } from "../context/AppContext";
 import { useData } from "../context/DataContext";
-import { User, Mail, Globe, Tag, Trash2, Plus, Bell, Clock, Info, Grid3x3 } from "lucide-react";
+import { User, Mail, Globe, Tag, Trash2, Plus, Bell, Clock, Info, Grid3x3, ImagePlus, RotateCcw } from "lucide-react";
 
 const avatarUrl = (style: string, seed: string) =>
   `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&size=128&backgroundColor=transparent`;
@@ -49,12 +50,18 @@ export default function Settings() {
   const { currentUser, profileData, updateUserProfile } = useAuth();
   const { theme, setTheme, currency, setCurrency, timezone, setTimezone } = useApp();
   const { categories, addCategory, deleteCategory } = useData();
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState("profile");
 
   // Profile state
   const [name, setName] = useState(profileData?.name || currentUser?.displayName || "");
   const [bio, setBio] = useState(profileData?.bio || "");
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [selectedPresetAvatar, setSelectedPresetAvatar] = useState<string | null>(null);
+  const [uploadedAvatarFile, setUploadedAvatarFile] = useState<File | null>(null);
+  const [uploadedAvatarPreviewUrl, setUploadedAvatarPreviewUrl] = useState<string | null>(null);
+  const [editorSourceUrl, setEditorSourceUrl] = useState<string | null>(null);
+  const [editorFileName, setEditorFileName] = useState("");
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
 
@@ -78,6 +85,59 @@ export default function Settings() {
     paymentDay: "due",
   };
 
+  const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${currentUser?.email}&background=random`;
+  const displayAvatar = uploadedAvatarPreviewUrl || selectedPresetAvatar || currentUser?.photoURL || fallbackAvatarUrl;
+
+  const clearEditorSource = React.useCallback(() => {
+    setEditorSourceUrl((currentUrl) => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+      }
+      return null;
+    });
+    setEditorFileName("");
+    setIsEditorOpen(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, []);
+
+  const clearUploadedAvatar = React.useCallback(() => {
+    setUploadedAvatarPreviewUrl((currentUrl) => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+      }
+      return null;
+    });
+    setUploadedAvatarFile(null);
+  }, []);
+
+  const resetPendingAvatarSelection = React.useCallback(() => {
+    clearUploadedAvatar();
+    setSelectedPresetAvatar(null);
+  }, [clearUploadedAvatar]);
+
+  React.useEffect(() => {
+    return () => {
+      clearUploadedAvatar();
+      clearEditorSource();
+    };
+  }, [clearEditorSource, clearUploadedAvatar]);
+
+  const getAvatarUpdatePayload = () => {
+    if (uploadedAvatarFile) {
+      return {
+        avatarFile: uploadedAvatarFile,
+        photoURL: undefined,
+      };
+    }
+
+    return {
+      avatarFile: undefined,
+      photoURL: selectedPresetAvatar || currentUser?.photoURL || undefined,
+    };
+  };
+
   const persistNotifications = async (next: typeof notifications) => {
     setNotifications(next);
     setSaveLoading(true);
@@ -87,9 +147,10 @@ export default function Settings() {
       await updateUserProfile({
         name: name || profileData?.name || currentUser?.displayName || "",
         bio,
-        photoURL: avatarPreview || currentUser?.photoURL || undefined,
+        ...getAvatarUpdatePayload(),
         notifications: next,
       });
+      resetPendingAvatarSelection();
       setSaveMessage({ type: "success", text: "Notification settings saved." });
     } catch (err: any) {
       setSaveMessage({ type: "error", text: err.message || "Failed to save notification settings" });
@@ -113,7 +174,41 @@ export default function Settings() {
   }, [profileData, currentUser]);
 
   const handleAvatarSelect = (url: string) => {
-    setAvatarPreview(url);
+    clearUploadedAvatar();
+    setSelectedPresetAvatar(url);
+    setSaveMessage({ type: "", text: "" });
+  };
+
+  const handleLocalPhotoSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0];
+    if (!nextFile) return;
+
+    if (!nextFile.type.startsWith("image/")) {
+      setSaveMessage({ type: "error", text: "Only image uploads are allowed." });
+      event.target.value = "";
+      return;
+    }
+
+    if (nextFile.size > 5 * 1024 * 1024) {
+      setSaveMessage({ type: "error", text: "Avatar uploads must be 5 MB or smaller." });
+      event.target.value = "";
+      return;
+    }
+
+    clearEditorSource();
+    setEditorSourceUrl(URL.createObjectURL(nextFile));
+    setEditorFileName(nextFile.name);
+    setIsEditorOpen(true);
+    setSaveMessage({ type: "", text: "" });
+  };
+
+  const handleEditorConfirm = (file: File, previewUrl: string) => {
+    clearUploadedAvatar();
+    setUploadedAvatarFile(file);
+    setUploadedAvatarPreviewUrl(previewUrl);
+    setSelectedPresetAvatar(null);
+    clearEditorSource();
+    setSaveMessage({ type: "", text: "" });
   };
 
   const handleSaveProfile = async () => {
@@ -130,11 +225,11 @@ export default function Settings() {
       await updateUserProfile({
         name,
         bio,
-        photoURL: avatarPreview || currentUser?.photoURL || undefined
+        ...getAvatarUpdatePayload(),
       });
 
       clearTimeout(timeoutId);
-      setAvatarPreview(null);
+      resetPendingAvatarSelection();
       setSaveMessage({ type: "success", text: "Profile updated successfully!" });
     } catch (err: any) {
       clearTimeout(timeoutId);
@@ -223,11 +318,7 @@ export default function Settings() {
                 <div className="flex flex-col sm:flex-row items-center gap-8">
                   <div className="relative">
                     <img
-                      src={
-                        avatarPreview ||
-                        currentUser?.photoURL ||
-                        `https://ui-avatars.com/api/?name=${currentUser?.email}&background=random`
-                      }
+                      src={displayAvatar}
                       alt="Profile"
                       className="w-32 h-32 rounded-3xl border-4 object-cover rotate-3 shadow-xl"
                       style={{ borderColor: "var(--accent)", background: "var(--bg-elevated)" }}
@@ -240,8 +331,63 @@ export default function Settings() {
                     <div>
                       <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Select Your Vibe</h3>
                       <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        Curated from DiceBear Lorelei, Lorelei Neutral, Notionists, and Notionists Neutral.
+                        Upload your own photo or choose from the preset avatar library.
                       </p>
+                    </div>
+                    <div
+                      className="rounded-2xl border p-4 space-y-4"
+                      style={{ background: "var(--bg-elevated)", borderColor: "var(--border)" }}
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--text-muted)" }}>
+                            Personal Photo
+                          </p>
+                          <p className="text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
+                            JPG, PNG, or WebP up to 5 MB. You can crop and zoom before saving.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLocalPhotoSelected}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-black"
+                            style={{ background: "var(--accent)" }}
+                          >
+                            <ImagePlus size={16} />
+                            Upload photo
+                          </button>
+                          {(uploadedAvatarFile || selectedPresetAvatar) && (
+                            <button
+                              type="button"
+                              onClick={resetPendingAvatarSelection}
+                              className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold"
+                              style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+                            >
+                              <RotateCcw size={16} />
+                              Revert
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {(uploadedAvatarFile || selectedPresetAvatar) && (
+                        <div
+                          className="rounded-xl border px-3 py-3 text-xs"
+                          style={{ borderColor: "var(--border)", color: "var(--text-muted)", background: "var(--bg-surface)" }}
+                        >
+                          {uploadedAvatarFile
+                            ? `New uploaded photo ready: ${uploadedAvatarFile.name}`
+                            : "Preset avatar selected and ready to save."}
+                        </div>
+                      )}
                     </div>
                     <div
                       className="rounded-2xl border p-4"
@@ -262,7 +408,7 @@ export default function Settings() {
                           type="button"
                           onClick={() => handleAvatarSelect(avatar.url)}
                           title={avatar.name}
-                          className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-[1.04] active:scale-[0.98] shadow-md ${(avatarPreview === avatar.url || (!avatarPreview && currentUser?.photoURL === avatar.url))
+                          className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-[1.04] active:scale-[0.98] shadow-md ${(selectedPresetAvatar === avatar.url || (!selectedPresetAvatar && !uploadedAvatarFile && currentUser?.photoURL === avatar.url))
                             ? "border-[var(--accent)] scale-105 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                             : "border-[var(--border)] opacity-60 hover:opacity-100 hover:border-[var(--accent)]"
                             }`}
@@ -689,9 +835,10 @@ export default function Settings() {
                         await updateUserProfile({
                           name: name || profileData?.name || currentUser?.displayName || "",
                           bio,
-                          photoURL: avatarPreview || currentUser?.photoURL || undefined,
+                          ...getAvatarUpdatePayload(),
                           notifications,
                         });
+                        resetPendingAvatarSelection();
                         setSaveMessage({ type: "success", text: "Notification settings saved." });
                       } catch (err: any) {
                         setSaveMessage({ type: "error", text: err.message || "Failed to save notification settings" });
@@ -727,6 +874,13 @@ export default function Settings() {
           )}
         </div>
       </div>
+      <ProfileImageEditor
+        isOpen={isEditorOpen}
+        sourceUrl={editorSourceUrl}
+        fileName={editorFileName}
+        onCancel={clearEditorSource}
+        onConfirm={handleEditorConfirm}
+      />
     </div>
   );
 }
