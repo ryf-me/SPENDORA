@@ -11,5 +11,6 @@ dist/
 .wrangler/
 exports/
 .supabase/
+supabase/.temp/
 storage/
 *.log
