@@ -7,9 +7,6 @@ dist/
 
 .vercel
 .env*.local
-.dev.vars*
-.wrangler/
-exports/
 .supabase/
 supabase/.temp/
 storage/

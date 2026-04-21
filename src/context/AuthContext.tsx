@@ -12,7 +12,6 @@ type NotificationSettings = {
 
 type ProfileData = {
   id: string;
-  legacyFirebaseUid: string | null;
   name: string;
   email: string | null;
   bio: string;
@@ -67,7 +66,6 @@ function mapProfile(row: Record<string, any> | null): ProfileData | null {
 
   return {
     id: row.id,
-    legacyFirebaseUid: row.legacy_firebase_uid ?? null,
     name: row.name ?? "User",
     email: row.email ?? null,
     bio: row.bio ?? "",

@@ -12,7 +12,6 @@ $$;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  legacy_firebase_uid text unique,
   name text not null,
   email text,
   bio text not null default '',

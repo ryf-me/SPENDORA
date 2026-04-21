@@ -1,21 +1,16 @@
 {
   "name": "spendora",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "scripts": {
     "dev": "vite dev --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "npm run build && vite preview --port=3000 --host=0.0.0.0",
-    "deploy": "npm run build && wrangler deploy",
     "supabase:link": "npx supabase link --project-ref pjbtftqvkamejbwxeprm",
     "supabase:db:push": "npx supabase db push --linked",
     "supabase:secrets:set": "npx supabase secrets set --env-file supabase/.env --project-ref pjbtftqvkamejbwxeprm",
     "supabase:functions:deploy": "npx supabase functions deploy ai-assistant --project-ref pjbtftqvkamejbwxeprm",
-    "migrate:auth": "tsx scripts/supabase/import-auth-users.ts",
-    "migrate:data": "tsx scripts/supabase/import-firebase-data.ts",
-    "migrate:storage": "tsx scripts/supabase/import-storage.ts",
-    "migrate:verify": "tsx scripts/supabase/verify-migration.ts",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },
@@ -29,7 +24,6 @@
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
-    "pg": "^8.20.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-is": "^19.2.4",
@@ -38,13 +32,10 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.14.6",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0",
-    "wrangler": "^4.43.0"
+    "vite": "^6.2.0"
   }
 }
