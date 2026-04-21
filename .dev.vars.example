@@ -1,0 +1,3 @@
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+FIREBASE_API_KEY=your_firebase_web_api_key_here
+APP_URL=https://your-cloudflare-domain.example

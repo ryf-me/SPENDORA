@@ -1,5 +1,32 @@
 # Spendora Release Notes
 
+## v0.6.0
+
+Release focus: Cloudflare Workers migration, unified API hosting, and deployment/docs alignment.
+
+### Included changes
+
+- Moved the authenticated AI assistant endpoint from `api/ai-assistant.js` into `worker/index.ts`.
+- Replaced the custom Vercel local API middleware with the Cloudflare Vite plugin for local dev and preview flows.
+- Added `wrangler.jsonc` so the SPA assets and `/api/ai-assistant` run as one Cloudflare Workers project.
+- Added `public/_headers` and Worker-level response headers to preserve the app's security policy after the platform move.
+- Split local server-side secrets into `.dev.vars` / `.dev.vars.example` and updated `.gitignore` to keep Worker secrets out of git.
+- Added a `deploy` script and rewrote the README deployment guide for the Cloudflare Workers setup.
+- Removed the Vercel-specific config and analytics dependency from the app shell and package graph.
+
+### Release checklist
+
+- Set `OPENROUTER_API_KEY`, `FIREBASE_API_KEY`, and `APP_URL` as Wrangler secrets before deployment.
+- Verify `/api/ai-assistant` works in `npm run dev` and `npm run preview`.
+- Confirm SPA route refreshes resolve correctly through the Workers asset config.
+- Deploy Firebase rules separately after the application deploy if they changed.
+
+### Notes
+
+- This release changes the deployment target from Vercel to Cloudflare Workers.
+- The GitHub release for this version should be published from tag `v0.6.0`.
+- The canonical GitHub repository location is `https://github.com/ryf-me/SPENDORA_expense_tracker`.
+
 ## v0.5.0
 
 Release focus: product expansion across reporting, AI workflows, debtor follow-up, and usability upgrades.

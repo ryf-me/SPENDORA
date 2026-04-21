@@ -1,6 +1,5 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
 import { AppProvider, useApp } from "./context/AppContext";
@@ -79,7 +78,6 @@ export default function App() {
                   <Route path="reports" element={<Reports />} />
                 </Route>
               </Routes>
-              <Analytics />
             </BrowserRouter>
           </NotificationProvider>
         </DataProvider>
